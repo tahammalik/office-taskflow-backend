@@ -1,6 +1,8 @@
 """
+    -------database module-------
+
     This file for maintaining database
-    database connections etc.
+    database connections and sessions.
 """
 
 from typing import Annotated
@@ -17,7 +19,11 @@ conn_url = URL.create(
     database='userdb'
 )
 
-engine = create_engine(conn_url)
+try:
+    engine = create_engine(conn_url)
+except Exception as e:
+    raise ConnectionError(f"Failed to connect to the database: {e}")
+
 
 sessionlocal = sessionmaker(autoflush=False,autocommit=False,bind=engine)
 
@@ -28,7 +34,10 @@ def get_db():
     db = sessionlocal()
     try:
         yield db
-
+    except Exception:
+        db.rollback()
+        raise
+    
     finally:
         db.close()
 

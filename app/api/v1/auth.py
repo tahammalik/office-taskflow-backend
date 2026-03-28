@@ -12,6 +12,7 @@ from app.models.user import Users
 from app.core.security import hash_password
 from app.core.security import create_access_token
 from typing import Annotated
+from app.core.exceptions import EmailAlreadyExistsError
 
 
 router = APIRouter(
@@ -22,12 +23,9 @@ router = APIRouter(
 async def create_user(user_data:UserCreate,db:db_dependency):
     email = find_email(user_data.email,db=db)
     if email:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail='email already exists'
-        )
+       raise EmailAlreadyExistsError()
 
-    new_user = Users(id=user_data.id,
+    new_user = Users(
                  username=user_data.username,
                  email=user_data.email,
                  password=hash_password(user_data.password))
@@ -36,6 +34,7 @@ async def create_user(user_data:UserCreate,db:db_dependency):
         db.commit()
         db.refresh(new_user)
         return new_user
+    
     except Exception as e:
         db.rollback()
         print(f"DB ERROR: {e}")

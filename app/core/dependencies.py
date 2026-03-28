@@ -19,27 +19,32 @@ from fastapi import HTTPException,status
 from typing import Annotated
 from app.core.config import oauth2_scheme,ALGORITHM,SECRET_KEY
 import jwt
+from app.core.exceptions import UserNotFoundError
 
 
-# : check every request to make sure the valid user
-def get_current_user(token:Annotated[str,Depends(oauth2_scheme)],db:db_dependency):
-    credentials_exception = HTTPException(
+# check every request to make sure the valid user
+async def get_current_user(token:Annotated[str,Depends(oauth2_scheme)],db:db_dependency):
+      credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="could not validate credentials"
-    )
-
-    try:
+      )
+    # decode jwt token and extract user information
+      try:
         payload = jwt.decode(token,SECRET_KEY,algorithms=[ALGORITHM])
         id = payload.get('sub')
         username = payload.get('username')
         if any( v is None for v in [id,username]):
             raise credentials_exception
-        token_data = UserToken(id=int(id),username=username)
-    except InvalidTokenError:
-        raise credentials_exception
-    user = find_user(token_data.id,token_data.username,db=db)
-    if not user:
-        raise credentials_exception
-
-    return user
+        
+        token_data = UserToken(id=int(id),username=username )
+      except InvalidTokenError:
+          raise credentials_exception
+      
+      # validate user with data from token
+      user = find_user(token_data.id,token_data.username,db=db)
+      
+      if not user:
+          raise UserNotFoundError(message=f"user with id {token_data.id} and\
+                                   username {token_data.username} not found")
+      return user
 

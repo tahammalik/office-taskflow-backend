@@ -1,27 +1,23 @@
-from fastapi import FastAPI,status
-from fastapi.requests import Request
-from fastapi.responses import JSONResponse
-from uvicorn import run
+"""
+    -------exceptions module-------
 
-app = FastAPI()
+    This file for defining custom exceptions and their handlers.
+    Here we define a custom exception UserNotFoundError and its handler
+    it is now basic in future we can add more custom exceptions like InvalidCredentialsError,
+    DatabaseError etc and their handlers to provide more specific error messages and status codes
+    for different error scenarios.
+"""
 
-class UserNotFoundError(Exception):
+
+"""this is for practice later we can more structured and organized way 
+to handle exceptions like creating a separate file for exceptions and handlers and also we can use 
+logging to log the errors for better debugging and monitoring."""
+
+class UserNotFoundError(Exception):   # custom exception for user not found scenario
     def __init__(self,message):
         self.message = message
 
+class EmailAlreadyExistsError(Exception):  # custom exception for email already exists scenario
+    def __init__(self,message):
+        self.message = message
 
-@app.exception_handler(UserNotFoundError)
-def find_user(request: Request,exc:UserNotFoundError):
-    return JSONResponse(
-        status_code=status.HTTP_404_NOT_FOUND,
-        content={"message":exc.message}
-    )   
-users = ["john","doe","alice"]
-@app.get('/user/{user_name}')
-def get_user(user_name:str):
-    if user_name not in users:
-        raise UserNotFoundError(message=f"user with name {user_name} not found")
-    return {"user":user_name}
-
-if __name__ == "__main__":
-    run(app,host='localhost',port=8000)

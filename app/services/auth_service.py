@@ -10,20 +10,20 @@ from app.schemas.token import Token
 from app.core.security import verify_password
 from app.core.config import DUMMY_HASH
 from typing import Optional
+from app.core.exceptions import UserNotFoundError
+
 
 def find_email(email:str,db:db_dependency) -> bool:
     verify_email = db.query(Users).filter(Users.email == email).first()
-    if verify_email:
-        return True
-    else:
-        return False
+    
+    return verify_email
+
+
 def find_user(id,username,db:db_dependency):
     user = db.query(Users).filter(Users.id == id,
                                   Users.username == username).first()
-    if user:
-        return user
-    else:
-        return None
+    return user
+     
 
 def authenticate_user(username:str,password:str,db:db_dependency):
     user = db.query(Users).filter(Users.username == username).first()
