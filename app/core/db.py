@@ -19,11 +19,10 @@ conn_url = URL.create(
     database='userdb'
 )
 
-try:
-    engine = create_engine(conn_url)
-except Exception as e:
-    raise ConnectionError(f"Failed to connect to the database: {e}")
-
+engine = create_engine(conn_url,
+                       pool_size=10,
+                       pool_timeout=1800
+                       )
 
 sessionlocal = sessionmaker(autoflush=False,autocommit=False,bind=engine)
 
