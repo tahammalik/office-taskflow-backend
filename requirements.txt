@@ -3,6 +3,7 @@ uvicorn[standard]
 pydantic[email]
 sqlalchemy
 psycopg[binary]
+psycopg2
 python-multipart
 argon2-cffi
 pyjwt
