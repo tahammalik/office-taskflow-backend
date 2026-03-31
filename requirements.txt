@@ -2,7 +2,9 @@ fastapi
 uvicorn[standard]
 pydantic[email]
 sqlalchemy
-psycopg2-binary
+psycopg[binary]
 python-multipart
 argon2-cffi
 pyjwt
+redis
+pydantic_settings
