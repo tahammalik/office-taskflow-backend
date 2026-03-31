@@ -1,7 +1,6 @@
-
-
-#oauth2_scheme = OAuth2PasswordBearer(tokenUrl='token')
-
+"""
+    This file maintain configs like secretkeys,passwords, and database related info
+"""
 from pydantic_settings import BaseSettings,SettingsConfigDict
 from sqlalchemy import URL
 
@@ -30,7 +29,7 @@ class DatabaseConfig(BaseSettings):
             port=self.port,
             database=self.database
         )
-
+# Here we define class for importent keys and passwords
 class SecretConfig(BaseSettings):
     model_config = SettingsConfigDict(
         env_file='.key',
