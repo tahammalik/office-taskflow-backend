@@ -1,4 +1,4 @@
-# 🚀 Project Management & Authentication API
+# Project Management & Authentication API
 
 > **A production-ready FastAPI backend for team collaboration, project tracking, and secure authentication**
 
@@ -9,7 +9,7 @@
 
 ---
 
-## 📖 Table of Contents
+## Table of Contents
 
 - [Overview](#overview)
 - [Features](#features)
@@ -25,66 +25,66 @@
 
 ---
 
-## 🎯 Overview
+## Overview
 
 This is a comprehensive **Project Management & Authentication API** built with FastAPI, designed to handle multi-organization workflows with role-based access control. The system supports user authentication, organization management, team collaboration, project tracking, and task assignment.
 
 ### Key Capabilities
 
-- 🔐 **Secure Authentication** - JWT-based auth with Argon2 password hashing
-- 🏢 **Multi-Organization Support** - Create and manage multiple organizations
-- 👥 **Team Management** - Organize users into teams with specific roles
-- 📊 **Project Tracking** - Create, assign, and monitor projects
-- ✅ **Task Management** - Assign tasks and track progress
-- 🔒 **Role-Based Access** - Admin, Manager, and Employee role hierarchy
+-  **Secure Authentication** - JWT-based auth with Argon2 password hashing
+-  **Multi-Organization Support** - Create and manage multiple organizations
+-  **Team Management** - Organize users into teams with specific roles
+-  **Project Tracking** - Create, assign, and monitor projects
+-  **Task Management** - Assign tasks and track progress
+-  **Role-Based Access** - Admin, Manager, and Employee role hierarchy
 
 ---
 
-## ✨ Features
+##  Features
 
 ### Authentication & Security
-- ✅ **JWT Token Authentication** - Secure access tokens with configurable expiry (30 minutes default)
-- ✅ **Argon2 Password Hashing** - Industry-leading password security with peppering
-- ✅ **OAuth2 Password Flow** - Standard OAuth2 implementation for token generation
-- ✅ **Custom Exception Handlers** - Graceful error handling for UserNotFound, EmailExists, etc.
+-  **JWT Token Authentication** - Secure access tokens with configurable expiry (30 minutes default)
+-  **Argon2 Password Hashing** - Industry-leading password security with peppering
+-  **OAuth2 Password Flow** - Standard OAuth2 implementation for token generation
+-  **Custom Exception Handlers** - Graceful error handling for UserNotFound, EmailExists, etc.
 
 ### Organization Management
-- ✅ **Create Organizations** - Users can create their own organizations
-- ✅ **Delete Organizations** - Admin-only organization deletion with cleanup
-- ✅ **Auto-Assign Admin Role** - Creator becomes admin of the organization
+-  **Create Organizations** - Users can create their own organizations
+-  **Delete Organizations** - Admin-only organization deletion with cleanup
+-  **Auto-Assign Admin Role** - Creator becomes admin of the organization
 
 ### Team & Group Management
-- ✅ **Create Teams** - Manager/Admin can create teams with descriptions
-- ✅ **Delete Teams** - Remove teams from the system
-- ✅ **Role Restrictions** - Only managers and admins can manage teams
+-  **Create Teams** - Manager/Admin can create teams with descriptions
+-  **Delete Teams** - Remove teams from the system
+-  **Role Restrictions** - Only managers and admins can manage teams
 
 ### Project Management
-- ✅ **Create Projects** - Define projects with title, description, and deadlines
-- ✅ **View Projects** - List all projects within an organization
-- ✅ **Auto-Link Organization** - Projects automatically linked to creator's organization
-- ✅ **Role-Based Access** - Only admins and managers can create/view projects
+-  **Create Projects** - Define projects with title, description, and deadlines
+-  **View Projects** - List all projects within an organization
+-  **Auto-Link Organization** - Projects automatically linked to creator's organization
+-  **Role-Based Access** - Only admins and managers can create/view projects
 
 ### Task Management
-- ✅ **Create Tasks** - Assign tasks to team members
-- ✅ **View My Tasks** - Employees can view their assigned tasks
-- ✅ **Track Progress** - Managers/Admins can view all tasks and progress
-- ✅ **Role-Based Visibility** - Different views based on user role
+-  **Create Tasks** - Assign tasks to team members
+-  **View My Tasks** - Employees can view their assigned tasks
+-  **Track Progress** - Managers/Admins can view all tasks and progress
+-  **Role-Based Visibility** - Different views based on user role
 
 ### Database & Performance
-- ✅ **PostgreSQL Database** - Robust relational database with SQLAlchemy ORM
-- ✅ **Connection Pooling** - Efficient database connection management
-- ✅ **Alembic Migrations** - Schema version control and migrations
-- ✅ **CORS Support** - Configured for cross-origin requests
+-  **PostgreSQL Database** - Robust relational database with SQLAlchemy ORM
+-  **Connection Pooling** - Efficient database connection management
+-  **Alembic Migrations** - Schema version control and migrations
+-  **CORS Support** - Configured for cross-origin requests
 
 ### Developer Experience
-- ✅ **Auto-Generated Docs** - Swagger UI at `/docs` and ReDoc at `/redoc`
-- ✅ **Pydantic Validation** - Request/response validation with custom schemas
-- ✅ **Structured Logging** - Comprehensive logging for debugging and monitoring
-- ✅ **Dependency Injection** - Clean architecture using FastAPI's DI system
+-  **Auto-Generated Docs** - Swagger UI at `/docs` and ReDoc at `/redoc`
+-  **Pydantic Validation** - Request/response validation with custom schemas
+-  **Structured Logging** - Comprehensive logging for debugging and monitoring
+-  **Dependency Injection** - Clean architecture using FastAPI's DI system
 
 ---
 
-## 🛠️ Tech Stack
+##  Tech Stack
 
 | Category | Technology | Version |
 |----------|-----------|---------|
@@ -101,7 +101,7 @@ This is a comprehensive **Project Management & Authentication API** built with F
 
 ---
 
-## 🏗️ Architecture
+##  Architecture
 
 ```
 app/
@@ -146,7 +146,7 @@ app/
 
 ---
 
-## 🚀 Getting Started
+##  Getting Started
 
 ### Prerequisites
 
@@ -207,7 +207,7 @@ SECRET_KEY=your_jwt_secret_key_minimum_32_chars_long
 ALGORITHM=HS256
 ```
 
-> ⚠️ **Security Note**: Never commit `.env` or `.key` files to version control. These files contain sensitive credentials.
+>  **Security Note**: Never commit `.env` or `.key` files to version control. These files contain sensitive credentials.
 
 #### 6. Start the Server
 
@@ -267,7 +267,7 @@ uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
 ---
 
-## 🔐 Role-Based Access Control
+## Role-Based Access Control
 
 The API implements a three-tier role system:
 
@@ -324,7 +324,7 @@ The API implements a three-tier role system:
 
 ---
 
-## 🧪 Development
+## Development
 
 ### Running Tests
 
@@ -367,7 +367,7 @@ docker run -p 8000:8000 --env-file .env project-management-api
 
 ---
 
-## 🤝 Contributing
+## Contributing
 
 We welcome contributions! Please follow these steps:
 
@@ -393,7 +393,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-## 🙏 Acknowledgments
+## Acknowledgments
 
 - [FastAPI](https://fastapi.tiangolo.com/) - Modern, fast web framework
 - [SQLAlchemy](https://www.sqlalchemy.org/) - Python SQL toolkit
@@ -402,7 +402,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-## 📞 Support
+##  Support
 
 For support, please open an issue in the repository or contact me.
 
