@@ -209,27 +209,12 @@ ALGORITHM=HS256
 
 > ⚠️ **Security Note**: Never commit `.env` or `.key` files to version control. These files contain sensitive credentials.
 
-#### 5. Run Database Migrations
-
-```bash
-# Initialize Alembic (if not already done)
-alembic init alembic
-
-# Create initial migration
-alembic revision --autogenerate -m "Initial migration"
-
-# Apply migrations
-alembic upgrade head
-```
-
 #### 6. Start the Server
 
 ```bash
 # Development mode with auto-reload
 uvicorn app.main:app --reload --host 0.0.0.0 --port 8000
 
-# Production mode
-uvicorn app.main:app --host 0.0.0.0 --port 8000 --workers 4
 ```
 
 #### 7. Access the API
