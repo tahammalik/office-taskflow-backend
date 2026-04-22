@@ -1,33 +1,11 @@
-annotated-doc        0.0.4
-annotated-types      0.7.0
-anyio                4.13.0
-argon2-cffi          25.1.0
-argon2-cffi-bindings 25.1.0
-cffi                 2.0.0
-click                8.3.1
-dnspython            2.8.0
-email-validator      2.3.0
-fastapi              0.135.2
-greenlet             3.3.2
-h11                  0.16.0
-httptools            0.7.1
-idna                 3.11
-pip                  25.1.1
-psycopg2-binary      2.9.11
-pycparser            3.0
-pydantic             2.12.5
-pydantic_core        2.41.5
-pydantic-settings    2.13.1
-PyJWT                2.12.1
-python-dotenv        1.2.2
-python-multipart     0.0.22
-PyYAML               6.0.3
-redis                7.4.0
-SQLAlchemy           2.0.48
-starlette            1.0.0
-typing_extensions    4.15.0
-typing-inspection    0.4.2
-uvicorn              0.42.0
-uvloop               0.22.1
-watchfiles           1.1.1
-websockets           16.0
+fastapi==0.135.3
+uvicorn==0.44.0              # ASGI server to run FastAPI
+sqlalchemy==2.0.49           # ORM
+psycopg2-binary==2.9.11      # PostgreSQL driver
+alembic==1.18.4              # Database migrations (use this, not create_all)
+pyjwt==2.12.1                # JWT token creation & verification
+pydantic                     # data varification
+argon2-cffi==25.1.0          # Password hashing (argon2)
+redis==7.4.0                 # Redis client (account lockout, future caching)
+pydantic-settings==2.13.1    # Settings management from .env / .key files
+fastapi

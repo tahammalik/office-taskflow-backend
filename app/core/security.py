@@ -12,6 +12,9 @@ from argon2 import PasswordHasher
 from app.core.config import SecretConfig
 import jwt
 from argon2.exceptions import VerifyMismatchError
+from logging import getLogger
+
+logger = getLogger(__name__)
 
 
 secrets = SecretConfig()
@@ -38,13 +41,13 @@ def verify_password(hashed_password:str,plain_password:str):
     try:
         return ph.verify(hashed_password,peppered_password)
     except VerifyMismatchError:
-        print('password mismatch')
+        logger.error("password mismatch")
         
 
 
 
 # create access token using jwt
-def create_access_token(data:dict,expire_timedelta: timedelta=(timedelta(minutes=15)) ):
+def create_access_token(data:dict,expire_timedelta: timedelta=(timedelta(minutes=30)) ):
     to_encode = data.copy()
     expire = datetime.now(timezone.utc) + expire_timedelta
 

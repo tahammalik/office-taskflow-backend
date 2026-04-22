@@ -1,11 +1,6 @@
-from typing import Annotated
 from fastapi import FastAPI , status
-from fastapi.params import Depends
-from app.api.v1 import auth
+from app.api.v1 import tasks, user_auth,organization_auth,teams,projects
 from app.core.db import Base,engine
-from app.models.user import Users
-from app.core.dependencies import get_current_user
-from app.schemas.user import UserResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.exceptions import UserNotFoundError,EmailAlreadyExistsError,AccountLockedError
 from fastapi.requests import Request
@@ -44,12 +39,15 @@ async def account_locked_error(request: Request,exc:AccountLockedError):
           content={"message":exc.message}
      )
 
-app.include_router(auth.router)
+app.include_router(user_auth.router)
+app.include_router(tasks.router)
+app.include_router(organization_auth.router)
+app.include_router(teams.router)
+app.include_router(projects.router)
 
-@app.get('/root')
-def message():
-    return {"message":"server is running"}
+@app.get('/home')
+async def home():
+      return {"message":"home"}
 
-@app.get('/user',response_model=UserResponse)
-def get_user(current_user: Annotated[Users,Depends(get_current_user)]):
-    return current_user
+
+

@@ -12,22 +12,23 @@
 
 from fastapi.params import Depends
 from jwt import InvalidTokenError
-from app.services.auth_service import find_user
-from app.schemas.token import UserToken
+from app.services.user_service import find_user
+from app.schemas.token_schema import UserToken
 from app.core.db import db_dependency
 from fastapi import HTTPException,status
-from typing import Annotated
+from typing import Annotated, Optional,List
 from app.core.config import SecretConfig
 import jwt
 from app.core.exceptions import UserNotFoundError
+from app.models.user_model import User
 from fastapi.security import OAuth2PasswordBearer
 
 secrets = SecretConfig()
 
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl='token')
 
-# check every request to make sure the valid user
-async def get_current_user(token:Annotated[str,Depends(oauth2_scheme)],db:db_dependency):
+# to get and verify user by jwt token and return user object
+async def get_current_user(token:Annotated[str,Depends(oauth2_scheme)],db:db_dependency) -> Optional[User]:
       credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="could not validate credentials"
@@ -51,4 +52,17 @@ async def get_current_user(token:Annotated[str,Depends(oauth2_scheme)],db:db_dep
           raise UserNotFoundError(message=f"user not found!")
       
       return user
+
+# dependency to check manager or admin
+def require_role(allowed_role:List[str]):
+    # actual function that used by fastapi
+    async def role_checker(current_user:User = Depends(get_current_user)):
+        if current_user.role not in allowed_role:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail='You do not have permission to perform this action'
+            )
+        return current_user
+    return role_checker
+
 

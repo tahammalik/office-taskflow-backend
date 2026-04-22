@@ -5,8 +5,8 @@
     like find email,find user and many will be used in future 
 """
 from app.core.db import db_dependency
-from app.models.user import Users
-from app.schemas.token import Token
+from app.models.user_model import User
+from app.schemas.token_schema import Token
 from app.core.security import verify_password
 from app.core.config import SecretConfig
 from typing import Optional
@@ -20,32 +20,39 @@ MAX_FAILED_ATTEMPTS = 5
 LOCKOUT_DURATION_MINUTES = 30
 REDIS_KEY_PREFIX = "auth:lockout:"
 
-# Verify email for not duqlicate email exists | return bool value
+def user_to_response(user: User) -> dict:
+    return {"id": user.id, 
+            "username": user.username,
+            "role":user.role,
+            "organization":user.organization_id
+            }
+
+# Verify email for not duplicate email exists | return bool value
 def find_email(email:str,db:db_dependency) -> bool:
-    return db.query(Users).filter(Users.email == email).first() is None
+    return db.query(User).filter(User.email == email).first() is None
 
 # Verify user and return user object
-def find_user(id,db:db_dependency) -> Optional[Users]:
+def find_user(id,db:db_dependency) -> Optional[User]:
 
-    return db.query(Users).filter(Users.id == id).first()
+    return db.query(User).filter(User.id == id).first()
      
-
+# string that record failed attempt in redis
 def _get_failed_attempt_key(username: str)-> str:
     return f"{REDIS_KEY_PREFIX}attempts:{username}"
-
+# string that record that user is locked
 def _get_locked_key(username:str)-> str:
     return f"{REDIS_KEY_PREFIX}locked:{username}"
 
-
-def check_account_lockout_redis(username: str)-> str:
+# redis check that user is lockout or not
+def check_account_lockout_redis(username: str):
     r = get_redis_client()
     locked_key = _get_locked_key(username=username)
-
+    # if user locked is true and match in redis return custom error
     if r.exists(locked_key):
         ttl = r.ttl(locked_key)
         raise AccountLockedError(message=f'Account locked.Try again after {ttl} seconds')
-    
-def record_failed_attempt_redis(username:str) -> str:
+# record failed attempts in redis
+def record_failed_attempt_redis(username:str) -> None:
 
     r = get_redis_client()
     attempt_key = _get_failed_attempt_key(username=username)
@@ -56,7 +63,7 @@ def record_failed_attempt_redis(username:str) -> str:
         r.expire(attempt_key,LOCKOUT_DURATION_MINUTES*60)
     if attempts >= MAX_FAILED_ATTEMPTS:
         r.setex(locked_key,LOCKOUT_DURATION_MINUTES*60,'locked')
-
+# reset failed attempts after specific time(default=30min)
 def reset_failed_attempts_redis(username:str):
 
     r = get_redis_client()
@@ -64,19 +71,20 @@ def reset_failed_attempts_redis(username:str):
     r.delete(_get_failed_attempt_key(username=username))
     r.delete(_get_locked_key(username=username))
 
-
-def authenticate_user(username:str,password:str,db:db_dependency):
+# actual authentication happens here
+def authenticate_user(username:str,password:str,db:db_dependency) -> HTTPException | None | type[User]:
     
     try:
         check_account_lockout_redis(username)
     except RedisError as e:
         print("Redis connection error",e)
 
-    user = db.query(Users).filter(Users.username == username).first()
+    user = db.query(User).filter(User.username == username).first()
 
     if not user:
         verify_password(SecretConfig().dummy_hash,password)
-        return HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+        
 
     if not verify_password(user.password,password):
 
@@ -93,9 +101,7 @@ def authenticate_user(username:str,password:str,db:db_dependency):
         reset_failed_attempts_redis(username=username)
 
     except RedisError:
-        print("Failed to reste login attempt")
+        print("Failed to reset login attempt")
 
     return user
         
-
-
