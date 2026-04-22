@@ -1,12 +1,1 @@
-.env
-.key
-__pycache__/
-*.pyc
-.venv/
-app/__pycache__/
-app/api/__pycache__/
-app/core/__pycache__/
-app/models/__pycache__/
-app/schemas/__pycache__/
-app/services/__pycache__/
-app/utils/__pycache__/
+Nothing needs to be added to .gitignore since only a README.md file was modified and there are no build artifacts, dependencies, or temporary files in the changes.
