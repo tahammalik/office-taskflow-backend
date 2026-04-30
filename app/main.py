@@ -45,9 +45,9 @@ app.include_router(organization_auth.router)
 app.include_router(teams.router)
 app.include_router(projects.router)
 
-@app.get('/home')
+@app.get('/')
 async def home():
-      return {"message":"home"}
+      return {"message":"server is running"}
 
 
 

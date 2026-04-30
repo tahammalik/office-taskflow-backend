@@ -1,6 +1,7 @@
 from pydantic import BaseModel, ConfigDict,Field
 from datetime import datetime
 from typing import Optional
+from app.schemas.team_schema import TeamRead
 from app.schemas.user_schema import UserMinRead
 
 
@@ -10,12 +11,14 @@ class CreateProject(BaseModel):
     description: str
     dead_line: datetime
 
+# update project model for optional fields
 class UpdateProject(BaseModel):
 
     title: Optional[str]
     description: Optional[str]
     dead_line: Optional[datetime]
 
+# response model for project details with teams and creator details
 class ProjectResponse(BaseModel):
     
     id: int
@@ -23,6 +26,7 @@ class ProjectResponse(BaseModel):
     description: str
     starting_at: datetime
     dead_line: datetime
-    created_by: UserMinRead = Field(alias='creator')
+    teams: list[TeamRead] = []  # return list of teams assigned to this project 
+    created_by: UserMinRead = Field(alias='creator') # return creator details in response
 
     model_config = ConfigDict(from_attributes=True)

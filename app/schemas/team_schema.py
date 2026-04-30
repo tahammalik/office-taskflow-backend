@@ -5,9 +5,9 @@ from app.schemas.user_schema import UserMinRead
 
 class CreateTeam(BaseModel):
 
-    id: int
     team_name: str
     description: Optional[str]
+    
     
 
 class TeamResponse(BaseModel):
@@ -28,3 +28,13 @@ class TeamUpdate(BaseModel):
     description: Optional[str]
     project_id: Optional[int]
     leader_id: Optional[int]
+    is_active: Optional[bool]
+
+class TeamRead(BaseModel):
+
+    id: int
+    team_name: str
+    description: Optional[str]
+    leader: UserMinRead
+
+    model_config = ConfigDict(from_attributes=True)

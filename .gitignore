@@ -1,4 +1,5 @@
 .env
+.env2
 .key
 __pycache__/
 *.pyc
@@ -10,3 +11,4 @@ app/models/__pycache__/
 app/schemas/__pycache__/
 app/services/__pycache__/
 app/utils/__pycache__/
+docker-compose.yml

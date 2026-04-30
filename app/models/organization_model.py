@@ -6,11 +6,14 @@ from app.core.db import Base
 class Organization(Base):
     __tablename__ = 'organizations'
 
-    id = Column(Integer, autoincrement=True, primary_key=True, index=True)
+    id = Column(Integer, autoincrement=True)
     name = Column(String, nullable=False)
+    email = Column(String, nullable=False, unique=True,primary_key=True,index=True)
     created_at = Column(DateTime, nullable=False, server_default=func.now())
     created_by = Column(Integer, ForeignKey('users.id'), nullable=False)
     is_active = Column(Boolean, nullable=False, default=True)
+    is_deleted = Column(Boolean, nullable=False, default=False)
+    deleted_at = Column(DateTime, nullable=False, server_default=func.now())
 
 
     # define relationships

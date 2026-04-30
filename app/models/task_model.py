@@ -11,7 +11,8 @@ class Task(Base):
     description = Column(String)
     status = Column(String,nullable=False)
     created_at = Column(DateTime, server_default=func.now())
-    dead_line = Column(DateTime)
+    dead_line = Column(DateTime,nullable=False)
+    is_deleted = Column(Boolean, default=False)
 
     # Foreign Keys
     team_id = Column(Integer, ForeignKey('teams.id'), nullable=False)

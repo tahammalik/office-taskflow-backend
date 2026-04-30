@@ -8,4 +8,4 @@ pydantic                     # data varification
 argon2-cffi==25.1.0          # Password hashing (argon2)
 redis==7.4.0                 # Redis client (account lockout, future caching)
 pydantic-settings==2.13.1    # Settings management from .env / .key files
-fastapi
+pydantic[email]==2.13.1              # Email validation

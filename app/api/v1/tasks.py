@@ -8,28 +8,39 @@ from app.core.dependencies import require_role,get_current_user
 from app.models import user_model,task_model
 from app.schemas.task_schema import CreateTask,ResponseTask
 from app.core.db import db_dependency
-from app.services.task_service import create_task
-from logging import getLogger
-
+from app.core.logging_config import get_logger
 router = APIRouter(
-    prefix='/task/v1',
+    prefix='/v1/task',
     tags=['Tasks']
 )
 
-logger = getLogger(__name__)
+logger = get_logger(__name__)
 
 # manager/admin can create task
-@router.post('/',dependencies=[Depends(require_role(['admin','manager']))],response_model=ResponseTask)
+@router.post('/create',dependencies=[Depends(require_role(['admin','manager']))],response_model=ResponseTask)
 async def add_new_task(task_data:CreateTask,db:db_dependency,
                        current_user: user_model.User = Depends(get_current_user)):
 
-        new_task = await create_task(task_data=task_data,creator_id=current_user.id,db=db)
-        return new_task
+    new_task = task_model.Task(
+            title = task_data.title,
+            description = task_data.description,
+            is_done = task_data.status,
+            assigned_to = task_data.assign_to,
+            creator_id = current_user.id
+        )
 
+    try:
+        db.add(new_task)
+        db.commit()
+        db.refresh(new_task)
+        logger.info(f"task created with title:{task_data.title}.")
+        return new_task
+    except Exception as e:
+        logger.error(f"Database connection error! {e}")
 
 
 # only employee can see their own task
-@router.get('/my_tasks',response_model=List[ResponseTask])
+@router.get('/tasks',response_model=List[ResponseTask])
 async def get_my_tasks(db:db_dependency,current_user:user_model.User = Depends(get_current_user)):
     try:
         return db.query(task_model.Task).filter(task_model.Task.assign_to == current_user.id).all()
@@ -60,6 +71,3 @@ async def see_progress(db:db_dependency,current_user:user_model.User = Depends(g
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Database error occurred"
         )
-
-
-

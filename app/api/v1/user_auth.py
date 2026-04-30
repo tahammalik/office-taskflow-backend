@@ -13,17 +13,17 @@ from app.core.security import hash_password
 from app.core.security import create_access_token
 from typing import Annotated
 from app.core.exceptions import EmailAlreadyExistsError
-from logging import getLogger
+from app.core.logging_config import get_logger
 from app.core.dependencies import require_role, get_current_user
 
-logger = getLogger(__name__)
+logger = get_logger(__name__)
 
 router = APIRouter(
-    prefix='/auth/v1',
+    prefix='/v1/auth',
     tags=['Authentication']
     )
 
-@router.post('/user/create',response_model=UserResponse,status_code=status.HTTP_201_CREATED)
+@router.post('/user-create',response_model=UserResponse,status_code=status.HTTP_201_CREATED)
 async def create_user(user_data:UserCreate,db:db_dependency):
     
     email = find_email(user_data.email,db=db)

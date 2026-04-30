@@ -21,8 +21,8 @@ class UserBase(BaseModel):
     @field_validator('username')
     @classmethod
     def username_criteria(cls, v):
-        if re.search(r'[@#$%&!-]', v):
-            raise ValueError('username must avoid special characters')
+        if re.search(r'[(@#$%&!-)]', v):
+            raise ValueError('username must avoid special this (@#$%&!-) characters')
         return v
 
 class UserCreate(UserBase):
@@ -39,17 +39,15 @@ class UserResponse(UserBase):
     id: int
     username:str
     email: str
-    organization_id: int
+    organization_id: Optional[int] = None
     role: str
-
-    
+    model_config = ConfigDict(from_attributes=True)
 
 class GetUser(BaseModel):
     id: int
     username: str
-
     model_config = ConfigDict(from_attributes=True)
-
+    
 class UserMinRead(BaseModel):
     id: int
     username: str

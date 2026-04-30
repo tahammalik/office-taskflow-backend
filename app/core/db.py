@@ -10,21 +10,19 @@ from fastapi.params import Depends
 from sqlalchemy import create_engine, URL
 from sqlalchemy.orm import sessionmaker, Session, DeclarativeBase
 from app.core.config import DatabaseConfig
+from app.core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 db_config = DatabaseConfig()
 
-
-
-engine = create_engine(db_config.build_connection(),
-                       pool_size=10,
-                       pool_timeout=1800
-                       )
+engine = create_engine(db_config.build_connection(),pool_size=10,pool_timeout=1800)
 
 try:
     with engine.connect() as conn:
-        print("pass")
+        logger.info("Engine Connected %s", conn)
 except Exception as e:
-    print(e)
+    logger.error(f"Engine Error: %s",e)
 
 sessionlocal = sessionmaker(autoflush=False,autocommit=False,bind=engine)
 
@@ -38,7 +36,6 @@ def get_db():
     except:
         db.rollback()
         raise 
-    
     finally:
         db.close()
 

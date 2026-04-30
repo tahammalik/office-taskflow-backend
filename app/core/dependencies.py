@@ -1,14 +1,3 @@
-"""
-    ------Check dependencies to validate jwt token ------
-
-    1. step - decode payload(data) from jwt token and take specific data(sub,username)
-    2. step -  check if any of this none or not if any one is none raise error
-    then take data from jwt take to validate with pydantic(data validation)
-    
-    catch - if any changes with jwt by external like wrong token or key etc it shows InvalidTokenError.
-    
-    at last we validate user (is this usernam from token does exist?) for avoiding ghost user.
-"""
 
 from fastapi.params import Depends
 from jwt import InvalidTokenError
