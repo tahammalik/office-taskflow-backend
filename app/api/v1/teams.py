@@ -14,7 +14,7 @@ router = APIRouter(
 )
 
 logger = get_logger(__name__)
-# create team
+# create team endpoint only manager and admin can create team
 @router.post('/create',dependencies=[Depends(require_role(['manager','admin']))])
 async def create_group(group_data:CreateTeam,db:db_dependency,current_user: User = Depends(get_current_user)):
 
@@ -52,7 +52,7 @@ async def update_team(team_id:int,team_update:TeamUpdate,db:db_dependency,
    db.commit()
    db.refresh(team)
    return team
-# delete team endpoint only team leader or admin can delete the team
+# delete team endpoint only team leader/manager or admin can delete the team
 @router.delete('/delete-team/{team_id}',dependencies=[Depends(require_role(['admin','manager']))])
 async def delete_team(team_id:int,db:db_dependency,current_user: User = Depends(get_current_user)):
     team = db.query(Team).filter(Team.id == team_id,Team.organization_id == current_user.organization_id).first()
