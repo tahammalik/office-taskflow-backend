@@ -12,13 +12,12 @@ class Task(Base):
     status = Column(String,nullable=False)
     created_at = Column(DateTime, server_default=func.now())
     dead_line = Column(DateTime,nullable=False)
-    is_deleted = Column(Boolean, default=False)
-
     # Foreign Keys
     team_id = Column(Integer, ForeignKey('teams.id'), nullable=False)
     assign_to = Column(Integer, ForeignKey('users.id'), nullable=False)
     created_by = Column(Integer, ForeignKey('users.id'), nullable=False)
 
+    is_deleted = Column(Boolean, default=False)
     # Relationships
     team = relationship('Team', back_populates='tasks')
     assigned_employee = relationship('User', foreign_keys='Task.assign_to',
