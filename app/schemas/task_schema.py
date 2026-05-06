@@ -8,9 +8,11 @@ from typing import Literal
 class CreateTask(BaseModel):
 
     title: str = Field(...,max_length=50)
-    description: Optional[str] = Field(None)
-    assign_to: int              # param:id so datatype is int
+    description: Optional[str] = Field(None)        
     status: Literal['todo', 'in_progress', 'review', 'done']
+    dead_line: datetime
+    team_id: int
+    assign_to: int     # user id of the employee to whom the task is assigned
 # Task response schema
 class ResponseTask(BaseModel):
     id: int
