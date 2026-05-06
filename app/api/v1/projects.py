@@ -2,10 +2,10 @@ from fastapi import APIRouter,HTTPException,status,Depends
 from app.schemas.project_schema import ProjectResponse,CreateProject
 from app.core.dependencies import require_role,get_current_user
 from app.core.db import db_dependency
-from app.models import team_model, organization_model, user_model
+from app.models import team_model, organization_model, user_model, Organization
 from app.models.project_model import ProjectTeams,Project
 from app.core.logging_config import get_logger
-from app.services.user_service import user_to_response
+
 
 router = APIRouter(
     prefix='/v1/projects',
@@ -42,7 +42,7 @@ async def create_projects(project_data:CreateProject,db:db_dependency,current_us
 async def show_projects(db:db_dependency,current_user: user_model.User = Depends(get_current_user)):
 
     projects = db.query(Project).filter(Project.organization_id == current_user.organization_id).all()
-    if projects is None:
+    if not projects:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="projects not found")
@@ -51,19 +51,11 @@ async def show_projects(db:db_dependency,current_user: user_model.User = Depends
 @router.delete('/delete',dependencies=[Depends(require_role(['admin','manager']))])
 async def delete_project(project_id:int,db:db_dependency,current_user: user_model.User = Depends(get_current_user)):
 
-    organization = db.query(organization_model.Organization).filter(organization_model.Organization.id == current_user.organization_id).first()
-    # verify that user and organization is related or not
-    # if not raise error
-    if not organization:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail='user and organization not related to each other')
-    # if yes then delete project
-    project = db.query(Project).filter(Project.id == project_id).first()
+    project = db.query(Project).filter(Project.id == project_id,
+                                       Project.organization_id == current_user.organization_id).first()
+
     if not project:
-        raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail='Project not found!')
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail='project not found or  you do not have access to it')
     try:
         db.delete(project)
         db.commit()
@@ -77,20 +69,18 @@ async def delete_project(project_id:int,db:db_dependency,current_user: user_mode
 # assign project to team endpoint role required admin or manager
 @router.post('/assign-project/{project_id}/to-team/{team_id}',dependencies=[Depends(require_role(['manager','admin']))])
 async def assign_project(project_id:int,team_id:int,db:db_dependency,current_user: user_model.User = Depends(get_current_user)):
-    
-    project = db.query(Project).filter(Project.id == project_id).first()
-    if project is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail='Project not found')
-    
-    team = db.query(team_model.Team).filter(team_model.Team.id == team_id).first()
-    if team is None:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail='Team not found')
+    project = db.query(Project).filter(Project.id == project_id,Project.organization_id == current_user.organization_id).first()
+    team = db.query(team_model.Team).filter(team_model.Team.id == team_id,team_model.Team.organization_id == current_user.organization_id).first()
+    if not project or not team:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND,detail='project or team not found or you do not have access to them')
+    if project.organization_id != team.organization_id:
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN,detail='project and team do not belong to the same organization')
     try:
        assigned_project = ProjectTeams(project_id=project_id,team_id=team_id)
        db.add(assigned_project)
        db.commit()
        db.refresh(assigned_project)
-       logger.info(f"Project assigned : {project_id} to Team: {team.id}")
+       logger.info(f"Project assigned : {project_id} to Team:{team_id}")
     except Exception as e:
         db.rollback()
         logger.error(f"DB ERROR: %s",e)
