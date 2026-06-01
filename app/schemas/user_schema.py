@@ -1,4 +1,4 @@
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, ConfigDict
 from typing import Optional
 from datetime import datetime
 
@@ -28,3 +28,12 @@ class UserUpdate(BaseModel):
     email: Optional[EmailStr] = None
     role: Optional[str] = None
     enterprise_id: Optional[int] = None
+
+class UserMinRead(BaseModel):
+    id: int
+    username: str
+    enterprise_id:int
+    role: str
+    created_at: datetime
+
+    model_config = ConfigDict(from_attributes=True)
