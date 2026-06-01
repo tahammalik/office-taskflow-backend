@@ -16,6 +16,6 @@ class User(Base):
 
     # Relationships
     enterprise = relationship('Enterprise', foreign_keys=[enterprise_id], back_populates='users')
-    created_tasks = relationship('Task', foreign_keys='Task.created_by', back_populates='creator')
-    assigned_tasks = relationship('Task', foreign_keys='Task.assign_to', back_populates='assignee')
+    created_tasks = relationship('Task', foreign_keys='Task.created_by', back_populates='creator_manager')
+    assigned_tasks = relationship('Task', foreign_keys='Task.assign_to', back_populates='assigned_employee')
     led_teams = relationship('Team', back_populates='leader')

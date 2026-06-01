@@ -21,7 +21,7 @@ class Task(Base):
     # Relationships
     team = relationship('Team', back_populates='tasks')
     assigned_employee = relationship('User', foreign_keys='Task.assign_to',
-                                     back_populates='tasks_assigned')
+                                     back_populates='assigned_tasks')
     # creator_manager who create the task can be manager leader or admin
     creator_manager = relationship('User',foreign_keys='Task.created_by',
-                                   back_populates='tasks_creator')
+                                   back_populates='created_tasks')
