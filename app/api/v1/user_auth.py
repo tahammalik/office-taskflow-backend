@@ -1,8 +1,7 @@
 """
     This is file handle authentication router
 """
-from fastapi import APIRouter,HTTPException,status
-from fastapi.params import Depends
+from fastapi import APIRouter,HTTPException,status,Depends
 from fastapi.security import OAuth2PasswordRequestForm
 from app.schemas.token_schema import Token
 from app.schemas.user_schema import UserCreate, UserResponse
@@ -27,7 +26,7 @@ router = APIRouter(
 async def create_user(user_data:UserCreate,db:db_dependency):
     
     email = find_email(user_data.email,db=db)
-    if not email:
+    if email:
        raise EmailAlreadyExistsError(message='email already exist')
     new_user = User(
                  username=user_data.username,
@@ -65,8 +64,3 @@ async def token(form_data:Annotated[OAuth2PasswordRequestForm,Depends()],db:db_d
     access_token = create_access_token(data={'sub':str(user.id)})
 
     return Token(access_token=access_token,token_type='bearer')
-
-@router.get('/me',response_model=UserResponse)
-async def get_me(current_user: User = Depends(get_current_user)):
-    return current_user
-

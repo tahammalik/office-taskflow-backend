@@ -16,7 +16,7 @@ class TeamResponse(BaseModel):
     team_name: str
     description: Optional[str]
     created_at: datetime
-    project_id: int
+    project_id: Optional[int] = None
     leader: UserMinRead
     tasks: Optional[list] = []
 

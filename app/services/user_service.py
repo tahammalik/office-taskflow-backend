@@ -2,7 +2,7 @@
     file - auth_service
 
     - Handle basic logic in this project
-    like find email,find user and many will be used in future 
+    like find username,find user and many will be used in future 
 """
 from app.core.db import db_dependency
 from app.models.user_model import User
@@ -15,8 +15,11 @@ from app.core.redis_client import get_redis_client
 from datetime import datetime,timedelta,timezone
 from redis import RedisError
 from fastapi import HTTPException,status
+from app.core.logging_config import get_logger
 
-MAX_FAILED_ATTEMPTS = 5
+logger = get_logger(__name__)
+
+MAX_FAILED_ATTEMPTS = 4
 LOCKOUT_DURATION_MINUTES = 30
 REDIS_KEY_PREFIX = "auth:lockout:"
 
@@ -26,14 +29,15 @@ def user_to_response(user: User) -> dict:
             "role":user.role,
             "organization":user.organization_id
             }
-
-# Verify email for not duplicate email exists | return bool value
-def find_email(email:str,db:db_dependency) -> bool:
-    return db.query(User).filter(User.email == email).first() is None
+def find_email(email:str,db:db_dependency):
+    return db.query(User).filter(User.email==email).first()
+# Verify username for not duplicate username exists | return bool value
+def is_username_exist(username:str,db:db_dependency) -> bool:
+    # if user exist return true else false
+    return db.query(User).filter(User.username == username).first() is not None
 
 # Verify user and return user object
 def find_user(id,db:db_dependency) -> Optional[User]:
-
     return db.query(User).filter(User.id == id).first()
      
 # string that record failed attempt in redis
@@ -52,7 +56,7 @@ def check_account_lockout_redis(username: str):
         ttl = r.ttl(locked_key)
         raise AccountLockedError(message=f'Account locked.Try again after {ttl} seconds')
 # record failed attempts in redis
-def record_failed_attempt_redis(username:str) -> None:
+def record_failed_attempt_redis(username:str):
 
     r = get_redis_client()
     attempt_key = _get_failed_attempt_key(username=username)
@@ -61,7 +65,7 @@ def record_failed_attempt_redis(username:str) -> None:
 
     if attempts == 1:
         r.expire(attempt_key,LOCKOUT_DURATION_MINUTES*60)
-    if attempts >= MAX_FAILED_ATTEMPTS:
+    if attempts == MAX_FAILED_ATTEMPTS:
         r.setex(locked_key,LOCKOUT_DURATION_MINUTES*60,'locked')
 # reset failed attempts after specific time(default=30min)
 def reset_failed_attempts_redis(username:str):
@@ -72,7 +76,7 @@ def reset_failed_attempts_redis(username:str):
     r.delete(_get_locked_key(username=username))
 
 # actual authentication happens here
-def authenticate_user(username:str,password:str,db:db_dependency) -> HTTPException | None | type[User]:
+def authenticate_user(username:str,plain_password:str,db:db_dependency) -> HTTPException | None | type[User]:
     
     try:
         check_account_lockout_redis(username)
@@ -82,26 +86,26 @@ def authenticate_user(username:str,password:str,db:db_dependency) -> HTTPExcepti
     user = db.query(User).filter(User.username == username).first()
 
     if not user:
-        verify_password(SecretConfig().dummy_hash,password)
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED)
+        verify_password(SecretConfig().dummy_hash,plain_password=plain_password)
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED,
+                            detail='incorrect password or wrong user')
         
-
-    if not verify_password(user.password,password):
+    if not verify_password(user.password,plain_password):
 
         try:
             record_failed_attempt_redis(username=username)
         
         except RedisError:
-            print("failed record attempt")
-        
-        return None
-
+            logger.warning("Failed to record login attempt for %s", username)
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Incorrect username or password")
             
     try:
         reset_failed_attempts_redis(username=username)
 
     except RedisError:
-        print("Failed to reset login attempt")
+        print("Failed to reset login attempt for %s",username)
 
     return user
         

@@ -37,9 +37,9 @@ class SecretConfig(BaseSettings):
         case_sensitive=False
     )
 
-    password_secret_key:str 
-    dummy_hash:str
-    secret_key:str
-    algorithm:str 
+    password_secret_key:str     # for password, makes passwords more secure by adding this key to the password before hashing
+    dummy_hash:str              # dummy hash for password comaprison
+    secret_key:str              # for jwt token, should be long and random  
+    algorithm:str               # for jwt token
 
 

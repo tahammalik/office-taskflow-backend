@@ -1,5 +1,5 @@
 from fastapi import FastAPI , status
-from app.api.v1 import tasks, user_auth,organization_auth,teams,projects
+from app.api.v1 import tasks, user_auth,enterprise_auth,teams,projects
 from app.core.db import Base,engine
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.exceptions import UserNotFoundError,EmailAlreadyExistsError,AccountLockedError
@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse
 
 Base.metadata.create_all(bind=engine)
 
-app = FastAPI()
+app = FastAPI(title="Office TaskFlow - Enterprise Edition")
 
 app.add_middleware(
     CORSMiddleware,
@@ -41,13 +41,10 @@ async def account_locked_error(request: Request,exc:AccountLockedError):
 
 app.include_router(user_auth.router)
 app.include_router(tasks.router)
-app.include_router(organization_auth.router)
+app.include_router(enterprise_auth.router)
 app.include_router(teams.router)
 app.include_router(projects.router)
 
 @app.get('/')
 async def home():
-      return {"message":"server is running"}
-
-
-
+      return {"message":"server is running - Enterprise Edition"}

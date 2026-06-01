@@ -4,3 +4,4 @@ __pycache__
 *.pyc
 .key
 docker-compose.yml
+dockerfile

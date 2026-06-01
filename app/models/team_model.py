@@ -1,25 +1,21 @@
-"""
-    this file handles group
-"""
-
-from sqlalchemy import String,Integer,DateTime,Column,ForeignKey,Boolean
+from sqlalchemy import Column, Integer, String, Boolean, DateTime, func, ForeignKey
 from sqlalchemy.orm import relationship
-from sqlalchemy.sql import func
 from app.core.db import Base
-from . import project_model
+
 class Team(Base):
     __tablename__ = 'teams'
 
-    id = Column(Integer, primary_key=True, autoincrement=True)
-    team_name = Column(String,nullable=False)
+    id = Column(Integer, primary_key=True, index=True)
+    team_name = Column(String, unique=True, index=True, nullable=False)
     description = Column(String)
-    created_at = Column(DateTime, server_default=func.now())
-    is_active = Column(Boolean,nullable=False,default=True)
-    is_deleted = Column(Boolean,nullable=False,default=False)
-    organization_id = Column(Integer,ForeignKey('organizations.id'),nullable=True)
-    # leader id
-    leader_id = Column(Integer, ForeignKey('users.id'), nullable=False)
+    is_active = Column(Boolean, default=True)
+    is_deleted = Column(Boolean, default=False)
+    created_at = Column(DateTime, default=func.now())
+    enterprise_id = Column(Integer, ForeignKey('enterprises.id'), nullable=True)
+    leader_id = Column(Integer, ForeignKey('users.id'), nullable=True)
+
     # Relationships
-    project = relationship('Project',secondary=project_model.ProjectTeams.__table__,back_populates='teams')
-    leader = relationship('User',foreign_keys='Team.leader_id', back_populates='team_led')
+    enterprise = relationship('Enterprise')
+    leader = relationship('User', back_populates='led_teams')
     tasks = relationship('Task', back_populates='team')
+    projects = relationship('Project', secondary='project_teams', back_populates='teams')

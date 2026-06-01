@@ -39,6 +39,9 @@ async def get_current_user(token:Annotated[str,Depends(oauth2_scheme)],db:db_dep
       
       if not user:
           raise UserNotFoundError(message=f"user not found!")
+      if user.is_active == False:
+          raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST,
+                              detail='user is suspended or deactivated')
       
       return user
 

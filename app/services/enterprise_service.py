@@ -1,22 +1,23 @@
-from app.schemas.organization_schema import CreateOrganization
+from app.schemas.enterprise_schema import CreateEnterprise
 from app.core.db import db_dependency
-from app.models.organization_model import Organization
+from app.models.enterprise_model import Enterprise
 from fastapi import HTTPException,status
 from logging import getLogger
 
 logger = getLogger(__name__)
 
-def add_organization(org_data:CreateOrganization,user_id:int,db:db_dependency):
+def add_enterprise(enterprise_data:CreateEnterprise,user_id:int,db:db_dependency):
 
-    new_organization = Organization(
-        name = org_data.name,
+    new_enterprise = Enterprise(
+        name = enterprise_data.name,
+        email = enterprise_data.email,
         created_by = user_id
     )
 
     try:
-        db.add(new_organization)
+        db.add(new_enterprise)
         db.commit()
-        db.refresh(new_organization)
+        db.refresh(new_enterprise)
     except Exception as e:
         logger.error(f"DB ERROR: %s", e)
         raise HTTPException(
@@ -24,4 +25,4 @@ def add_organization(org_data:CreateOrganization,user_id:int,db:db_dependency):
             detail="Database error occurred"
         )
     
-    return new_organization
+    return new_enterprise

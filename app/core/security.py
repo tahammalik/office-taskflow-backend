@@ -10,6 +10,7 @@
 from datetime import timedelta, datetime, timezone
 from argon2 import PasswordHasher
 from app.core.config import SecretConfig
+from fastapi import HTTPException,status
 import jwt
 from argon2.exceptions import VerifyMismatchError
 from logging import getLogger
@@ -26,7 +27,7 @@ ph = PasswordHasher(
     hash_len=64,
     salt_len=16
 )
-
+# convert plain password to hash 
 def hash_password(password: str):
     peppered_password = password.encode() + secrets.password_secret_key.encode()
 
@@ -39,11 +40,9 @@ def verify_password(hashed_password:str,plain_password:str):
     peppered_password = plain_password.encode() + secrets.password_secret_key.encode()
     
     try:
-        return ph.verify(hashed_password,peppered_password)
+        return ph.verify(hashed_password, peppered_password)
     except VerifyMismatchError:
-        logger.error("password mismatch")
-        
-
+        return False
 
 
 # create access token using jwt
@@ -56,7 +55,3 @@ def create_access_token(data:dict,expire_timedelta: timedelta=(timedelta(minutes
     encode_jwt = jwt.encode(to_encode,secrets.secret_key,algorithm=secrets.algorithm) 
 
     return encode_jwt
-
-
-
-
