@@ -9,9 +9,13 @@ from app.schemas.enterprise_schema import CreateEnterprise
 logger = getLogger(__name__)
 
 
+<<<<<<< Updated upstream
 async def add_enterprise(
     enterprise_data: CreateEnterprise, user_id: int, db: db_dependency
 ):
+=======
+def add_enterprise(enterprise_data: CreateEnterprise, user_id: int, db: db_dependency):
+>>>>>>> Stashed changes
 
     new_enterprise = Enterprise(
         name=enterprise_data.name, email=enterprise_data.email, created_by=user_id

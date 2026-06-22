@@ -1,10 +1,13 @@
-from pydantic import BaseModel, EmailStr
-from typing import Optional
 from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, EmailStr
+
 
 class CreateEnterprise(BaseModel):
     name: str
     email: EmailStr
+
 
 class ResponseEnterprise(BaseModel):
     id: int
@@ -16,7 +19,8 @@ class ResponseEnterprise(BaseModel):
     class Config:
         from_attributes = True
 
+
 class UpdateEnterprise(BaseModel):
-    name: Optional[str] = None
-    email: Optional[EmailStr] = None
-    is_active: Optional[bool] = None
+    name: Optional[str]
+    email: Optional[EmailStr]
+    is_active: Optional[bool]
