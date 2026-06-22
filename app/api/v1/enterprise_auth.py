@@ -39,15 +39,9 @@ async def create_enterprise(
     try:
         db.add(new_enterprise)
         await db.flush()
-<<<<<<< Updated upstream
         await db.execute(update(User)
                          .where(User.id == current_user.id)
                          .values(role="admin", enterprise_id=new_enterprise.id))
-=======
-        db.query(User).filter(User.id == current_user.id).update(
-            {"role": "admin", "enterprise_id": new_enterprise.id}
-        )
->>>>>>> Stashed changes
         await db.commit()
         await db.refresh(new_enterprise)
     except Exception as e:
@@ -91,13 +85,9 @@ async def delete_enterprise(
 
         db.query(User).filter(User.enterprise_id == ent_id).update(
             {"enterprise_id": None, "role": "user"}
-<<<<<<< Updated upstream
         )"""
         await db.execute(update(User).where(User.id == current_user.id).values({"enterprise_id": None, "role": "user"}))
         await db.execute(update(Enterprise).where(Enterprise.id == current_user.enterprise_id).values(is_active = False))
-=======
-        )
->>>>>>> Stashed changes
         await db.commit()
         logger.info(f"Enterprise {ent_id} deleted successfully.")
         return {"message": "Enterprise and memberships cleared."}
