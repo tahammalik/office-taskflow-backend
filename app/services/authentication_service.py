@@ -8,6 +8,8 @@ like find username,find user and many will be used in future
 from typing import Optional
 
 from fastapi import HTTPException, status
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 
 # from datetime import datetime,timedelta,timezone
 from redis import RedisError
@@ -38,19 +40,23 @@ def user_to_response(user: User) -> dict:
     }
 
 
-def find_email(email: str, db: db_dependency):
-    return db.query(User).filter(User.email == email).first()
+async def find_email(email: str, db: db_dependency):
+    # if user exist return user object else none
+    result = await db.execute(select(User).where(User.email == email))
+    return result.scalar_one_or_none()
 
 
 # Verify username for not duplicate username exists | return bool value
-def is_username_exist(username: str, db: db_dependency) -> bool:
+async def is_username_exist(username: str, db: db_dependency) -> bool:
     # if user exist return true else false
-    return db.query(User).filter(User.username == username).first() is not None
+    result = await db.execute(select(User).where(User.username == username))
+    return result.scalar_one_or_none() is not None
 
 
 # Verify user and return user object
-def find_user(id, db: db_dependency) -> Optional[User]:
-    return db.query(User).filter(User.id == id).first()
+async def find_user(id, db: db_dependency) -> Optional[User]:
+    result = await db.execute(select(User).where(User.id == id))
+    return result.scalar_one_or_none()
 
 
 # string that record failed attempt in redis
@@ -99,7 +105,7 @@ def reset_failed_attempts_redis(username: str):
 
 
 # authentication logic to prevent attacks using lockout method
-def authenticate_user(
+async def authenticate_user(
     username: str, plain_password: str, db: db_dependency
 ) -> User | None:
 
@@ -108,7 +114,8 @@ def authenticate_user(
     except RedisError as e:
         print("Redis connection error", e)
 
-    user = db.query(User).filter(User.username == username).first()
+    result = await db.execute(select(User).where(User.username == username))
+    user = result.scalar_one_or_none()
 
     if not user:
         verify_password(SecretConfig().dummy_hash, plain_password=plain_password)

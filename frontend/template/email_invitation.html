@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>You're Invited!</title>
+    <style>
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        
+        @keyframes doveAppear {
+            0% { 
+                opacity: 0; 
+                transform: scale(0.5) rotate(-10deg); 
+            }
+            70% { 
+                transform: scale(1.1) rotate(5deg); 
+            }
+            100% { 
+                opacity: 1; 
+                transform: scale(1) rotate(0); 
+            }
+        }
+        
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #f5f7fa 0%, #e4edf9 100%);
+            border-radius: 10px;
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            animation: fadeIn 0.8s ease-out;
+        }
+        
+        .header {
+            text-align: center;
+            padding: 20px 0;
+        }
+        
+        .dove-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+        
+        .dove {
+            width: 100px;
+            height: 100px;
+            margin: 0 auto;
+            animation: doveAppear 1s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
+            opacity: 0;
+        }
+        
+        .title {
+            color: #2c3e50;
+            font-size: 28px;
+            margin: 20px 0 10px;
+            text-align: center;
+            font-weight: 600;
+        }
+        
+        .subtitle {
+            color: #7f8c8d;
+            font-size: 18px;
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        
+        .content {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            margin: 20px 0;
+        }
+        
+        .message {
+            color: #34495e;
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 25px;
+        }
+        
+        .btn {
+            display: inline-block;
+            padding: 14px 30px;
+            background: linear-gradient(135deg, #3498db 0%, #2c3e50 100%);
+            color: white;
+            text-decoration: none;
+            border-radius: 50px;
+            font-weight: 600;
+            font-size: 16px;
+            text-align: center;
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(52, 152, 219, 0.3);
+            margin: 20px 0;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(52, 152, 219, 0.4);
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            color: #95a5a6;
+            font-size: 14px;
+        }
+        
+        .divider {
+            height: 1px;
+            background: linear-gradient(90deg, transparent, #bdc3c7, transparent);
+            margin: 30px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <div class="dove-container">
+                <svg class="dove" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path fill="#3498db" d="M12,4A4,4 0 0,1 16,8A4,4 0 0,1 12,12A4,4 0 0,1 8,8A4,4 0 0,1 12,4M12,14C16.42,14 20,15.79 20,18V20H4V18C4,15.79 7.58,14 12,14M21,12.5C21,13.33 20.33,14 19.5,14H18.5C17.67,14 17,13.33 17,12.5V11.5C17,10.67 17.67,10 18.5,10H19.5C20.33,10 21,10.67 21,11.5V12.5M3,12.5V11.5C3,10.67 3.67,10 4.5,10H5.5C6.33,10 7,10.67 7,11.5V12.5C7,13.33 6.33,14 5.5,14H4.5C3.67,14 3,13.33 3,12.5Z"/>
+                </svg>
+            </div>
+            <h1 class="title">You're Invited!</h1>
+            <p class="subtitle">Join our collaborative workspace</p>
+        </div>
+        
+        <div class="content">
+            <p class="message">Hi there,</p>
+            <p class="message">You have been invited to join our platform. Click the button below to accept the invitation and get started with your new workspace:</p>
+            <div style="text-align: center;">
+                <a href="{{ invitation_link }}" class="btn">Accept Invitation</a>
+            </div>
+            <p class="message">If you have any questions, feel free to contact us.</p>
+        </div>
+        
+        <div class="divider"></div>
+        
+        <div class="footer">
+            <p>Best regards,<br>The Team</p>
+        </div>
+    </div>
+</body>
+</html>
+</body>
+</html>

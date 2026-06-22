@@ -24,4 +24,7 @@ class EmailAlreadyExistsError(Exception):  # custom exception for email already 
 class AccountLockedError(Exception):
     def __init__(self,message):
         self.message = message
-        
+
+class ServerError(Exception):
+    def __init__(self, *args):
+        self.args = args

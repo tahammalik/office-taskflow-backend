@@ -3,6 +3,7 @@ This file maintain configs like secretkeys,passwords, and database related info
 """
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import EmailStr
 from sqlalchemy import URL
 
 
@@ -43,3 +44,10 @@ class SecretConfig(BaseSettings):
     dummy_hash: str  # dummy hash for password comaprison
     secret_key: str  # for jwt token, should be long and random
     algorithm: str  # for jwt token
+
+class EmailConfig(BaseSettings):
+    model_config = SettingsConfigDict(
+        env_file=".key", env_file_encoding="utf-8",case_sensitive=False)
+    resend_api_key: str
+    FROM_EMAIL: EmailStr
+    TO_EMAIL: EmailStr

@@ -22,11 +22,13 @@ engine = create_async_engine(
     db_config.build_connection(), pool_size=10, pool_timeout=1800
 )
 
-try:
-    with engine.connect() as conn:
-        logger.info("Engine Connected %s", conn)
-except Exception as e:
-    logger.error("Engine Error: %s", e)
+async def init_db():
+    async with engine.begin() as conn:
+        try:
+            await conn.run_sync(Base.metadata.create_all)
+            logger.info("Engine Connected %s", conn)
+        except Exception as e:
+            logger.error("Engine Error: %s", e)
 
 sessionlocal = async_sessionmaker(autoflush=False, autocommit=False, bind=engine)
 
@@ -35,15 +37,16 @@ class Base(DeclarativeBase):
     pass
 
 
-def get_db():
+async def get_db():
     db = sessionlocal()
     try:
         yield db
     except:
-        db.rollback()
+        await db.rollback()
         raise
     finally:
-        db.close()
+        await db.close()
 
 
 db_dependency = Annotated[AsyncSession, Depends(get_db)]
+

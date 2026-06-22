@@ -1,7 +1,7 @@
 from typing import cast
 
 from fastapi import APIRouter, Depends, HTTPException, status
-
+from sqlalchemy import select,update
 from app.core.db import db_dependency
 from app.core.dependencies import get_current_user, require_role
 from app.core.logging_config import get_logger
@@ -21,9 +21,11 @@ async def create_enterprise(
     db: db_dependency,
     current_user: User = Depends(get_current_user),
 ):
-    search_ent = (
-        db.query(Enterprise).filter(Enterprise.email == enterprise_data.email).first()
-    )
+    # search for email is already exist or not
+    result =  await db.execute(select(Enterprise)
+                               .where(Enterprise.email == enterprise_data.email))
+    search_ent = result.scalar_one_or_none()
+    
     if search_ent:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
@@ -36,12 +38,12 @@ async def create_enterprise(
     )
     try:
         db.add(new_enterprise)
-        db.flush()
-        db.query(User).filter(User.id == current_user.id).update(
-            {"role": "admin", "enterprise_id": new_enterprise.id}
-        )
-        db.commit()
-        db.refresh(new_enterprise)
+        await db.flush()
+        await db.execute(update(User)
+                         .where(User.id == current_user.id)
+                         .values(role="admin", enterprise_id=new_enterprise.id))
+        await db.commit()
+        await db.refresh(new_enterprise)
     except Exception as e:
         logger.error("DB ERROR: %s", e)
         raise HTTPException(
@@ -64,7 +66,9 @@ async def delete_enterprise(
             detail="You do not have administrative authority over this enterprise.",
         )
 
-    enterprise = db.query(Enterprise).filter(Enterprise.id == ent_id).first()
+    result = await db.execute(select(Enterprise).where(Enterprise.id == ent_id))
+    enterprise = result.scalar_one_or_none()
+
     if not enterprise:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Enterprise not found"
@@ -75,16 +79,19 @@ async def delete_enterprise(
             detail="Enterprise is already inactive",
         )
     try:
-        db.query(Enterprise).filter(Enterprise.id == ent_id).update(
+        """db.query(Enterprise).filter(Enterprise.id == ent_id).update(
             {"is_active": False}
         )
+
         db.query(User).filter(User.enterprise_id == ent_id).update(
             {"enterprise_id": None, "role": "user"}
-        )
-        db.commit()
+        )"""
+        await db.execute(update(User).where(User.id == current_user.id).values({"enterprise_id": None, "role": "user"}))
+        await db.execute(update(Enterprise).where(Enterprise.id == current_user.enterprise_id).values(is_active = False))
+        await db.commit()
         logger.info(f"Enterprise {ent_id} deleted successfully.")
         return {"message": "Enterprise and memberships cleared."}
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error("DB ERROR: %s", e)
         raise HTTPException(status_code=500, detail="Database error occurred")

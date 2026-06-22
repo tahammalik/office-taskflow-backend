@@ -1,7 +1,16 @@
-"""
-    email-services.py file is responsible for handling email-related 
-    operations in the application. It provides functions to send emails,
-    manage email templates, and handle email notifications. 
-    The services in this file can be used across different parts of the application 
-    to ensure consistent email communication with users.
-"""
+
+import resend
+from core.config import EmailConfig
+from core.logging_config import get_logger
+from core.exceptions import ServerError
+from app.template import email_template
+
+configs = EmailConfig()
+logging = get_logger(__name__)
+
+class EmailService:
+    def __init__(self) -> None:
+        pass
+
+    def send_email(self):
+        pass

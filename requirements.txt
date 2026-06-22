@@ -1,7 +1,6 @@
 fastapi
 uvicorn              
-sqlalchemy           
-psycopg2-binary     
+sqlalchemy    
 alembic              
 pyjwt                
 pydantic                     
@@ -12,4 +11,5 @@ pydantic[email]
 alembic              
 fastapi-mail
 python-multipart
-mailtrap                
+resend
+asyncpg

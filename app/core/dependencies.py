@@ -9,17 +9,16 @@ from fastapi import HTTPException, status
 from fastapi.params import Depends
 from fastapi.security import OAuth2PasswordBearer
 from jwt import InvalidTokenError
-
 from app.core.config import SecretConfig
 from app.core.db import db_dependency
 from app.core.exceptions import UserNotFoundError
 from app.models.user_model import User
 from app.schemas.token_schema import UserToken
-from app.services.user_service import find_user
+from app.services.authentication_service import find_user
 
 secrets = SecretConfig()
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
 
 # dependency to get current user from jwt token
@@ -42,7 +41,7 @@ async def get_current_user(
         raise credentials_exception
 
     # find user by id from token data
-    user = find_user(token_data.id, db=db)
+    user = await find_user(token_data.id, db=db)
 
     if not user:
         raise UserNotFoundError(message="user not found!")

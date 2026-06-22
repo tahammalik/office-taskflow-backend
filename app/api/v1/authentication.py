@@ -6,16 +6,17 @@ from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.security import OAuth2PasswordRequestForm
-
 from app.core.db import db_dependency
 from app.core.dependencies import get_current_user
 from app.core.exceptions import EmailAlreadyExistsError
 from app.core.logging_config import get_logger
-from app.core.security import create_access_token, hash_password
+from app.core.security import create_access_token, hash_password,create_refresh_token
 from app.models.user_model import User
-from app.schemas.token_schema import Token
+from app.models.refresh_token import RefreshToken
+from app.schemas.token_schema import Token,TokenResponse
 from app.schemas.user_schema import UserCreate, UserResponse
-from app.services.user_service import authenticate_user, find_email
+from app.services.authentication_service import authenticate_user, find_email
+from datetime import datetime,timezone,timedelta
 
 # from app.core.dependencies import require_role, get_current_user
 
@@ -47,6 +48,7 @@ async def create_user(user_data: UserCreate, db: db_dependency):
         return new_user
 
     except Exception as e:
+        await db.rollback()
         logger.error("DB ERROR: %s", e, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -54,28 +56,12 @@ async def create_user(user_data: UserCreate, db: db_dependency):
         )
 
 
-# Login endpoint for authenticating users and returning a JWT token
-@router.post("/login", response_model=Token)
+@router.post("/login")
 async def login(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: db_dependency
-):
-    user = authenticate_user(form_data.username, form_data.password, db=db)
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Incorrect username or password",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    access_token = create_access_token(data={"sub": str(user.id)})
-    return Token(access_token=access_token.decode("utf-8"), token_type="bearer")
-
-
-@router.post("/token")
-async def token(
-    form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: db_dependency
+        form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: db_dependency
 ):
 
-    user = authenticate_user(form_data.username, form_data.password, db=db)
+    user = await authenticate_user(form_data.username, form_data.password, db=db)
 
     if not user:
         raise HTTPException(
@@ -84,9 +70,10 @@ async def token(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    access_token = create_access_token(data={"sub": str(user.id)})
-
-    return Token(access_token=access_token.decode("utf-8"), token_type="bearer")
+    access_token = await create_access_token(data={"sub": str(user.id)})
+    refresh_token = await create_refresh_token(data={"sub": str(user.id)})
+    
+    return {"access_token":access_token,"refresh_token":refresh_token}
 
 
 @router.get("/me", response_model=UserResponse)
