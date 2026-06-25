@@ -24,10 +24,13 @@ class EmailAlreadyExistsError(
 class AccountLockedError(Exception):
     def __init__(self, message):
         self.message = message
-<<<<<<< Updated upstream
 
 class ServerError(Exception):
     def __init__(self, *args):
         self.args = args
-=======
->>>>>>> Stashed changes
+
+class ForbiddenError(Exception):
+    def __init__(self,message="Access to this resource is forbidden.",status_code=403):
+        self.message = message
+        self.status_code = status_code
+        super().__init__(self.message)
