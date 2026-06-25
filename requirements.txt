@@ -1,5 +1,4 @@
 fastapi
-<<<<<<< Updated upstream
 uvicorn              
 sqlalchemy    
 alembic              
@@ -14,20 +13,3 @@ fastapi-mail
 python-multipart
 resend
 asyncpg
-=======
-uvicorn
-sqlalchemy
-psycopg2-binary
-alembic
-pyjwt
-pydantic
-argon2-cffi
-redis
-pydantic-settings
-pydantic[email]
-alembic
-fastapi-mail
-python-multipart
-mailtrap
-redis
->>>>>>> Stashed changes
