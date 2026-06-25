@@ -1,8 +1,7 @@
 from typing import cast
-
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy import insert
-
+from sqlalchemy import insert,select
+from app.core.exceptions import *
 from app.core.db import db_dependency
 from app.core.dependencies import get_current_user, require_role
 from app.core.logging_config import get_logger
@@ -36,12 +35,12 @@ async def create_projects(
     )
     try:
         db.add(new_project)
-        db.commit()
-        db.refresh(new_project)
+        await db.commit()
+        await db.refresh(new_project)
         logger.info(f"project created: {new_project.id}")
         return new_project
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error("DB ERROR: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -59,11 +58,10 @@ async def show_projects(
     db: db_dependency, current_user: user_model.User = Depends(get_current_user)
 ):
 
-    projects = (
-        db.query(Project)
-        .filter(Project.enterprise_id == current_user.enterprise_id)
-        .all()
-    )
+    result = await db.execute(select(Project).where(
+        Project.enterprise_id == current_user.enterprise_id
+        ))
+    projects = result.scalars().all()
     if not projects:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="projects not found"
@@ -71,32 +69,34 @@ async def show_projects(
     return projects
 
 
-@router.delete("/delete", dependencies=[Depends(require_role(["admin", "manager"]))])
+@router.delete("/delete/{project_id}", dependencies=[Depends(require_role(["admin", "manager"]))])
 async def delete_project(
     project_id: int,
     db: db_dependency,
     current_user: user_model.User = Depends(get_current_user),
 ):
 
-    project = (
-        db.query(Project)
-        .filter(
-            Project.id == project_id,
-            Project.enterprise_id == current_user.enterprise_id,
-        )
-        .first()
-    )
+    result = await db.execute(select(Project).where(
+        Project.id == project_id,
+        Project.enterprise_id == current_user.enterprise_id,
+    ))
 
+    project = result.scalar_one_or_none()
     if not project:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="project not found or  you do not have access to it",
         )
+
+    if current_user.role != "admin" and project.created_by != current_user.id:
+        raise ForbiddenError("You do not have permission to delete this project.")
+
     try:
-        db.delete(project)
-        db.commit()
+        await db.delete(project)
+        await db.commit()
+        logger.info(f"Project {project.id} deleted by user {current_user.id}")
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error("DB ERROR: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -104,9 +104,9 @@ async def delete_project(
         )
 
 
-# assign project to team endpoint role required admin or manager
+# assign project to team endpoint. role required admin or manager
 @router.post(
-    "/assign-project/{project_id}/{team_id}",
+    "/assign/{project_id}/{team_id}",
     dependencies=[Depends(require_role(["manager", "admin"]))],
 )
 async def assign_project(
@@ -115,23 +115,21 @@ async def assign_project(
     db: db_dependency,
     current_user: user_model.User = Depends(get_current_user),
 ):
-    project = (
-        db.query(Project)
-        .filter(
-            Project.id == project_id,
-            Project.enterprise_id == current_user.enterprise_id,
-        )
-        .first()
-    )
-    team = (
-        db.query(team_model.Team)
-        .filter(
-            team_model.Team.id == team_id,
-            team_model.Team.enterprise_id == current_user.enterprise_id,
-        )
-        .first()
-    )
-    if not project or not team:
+    project_result = await db.execute(select(Project).where(
+        Project.id == project_id,
+        Project.enterprise_id == current_user.enterprise_id
+    ))
+
+    project = project_result.scalar_one_or_none()
+    
+    team_result = await db.execute(select(team_model.Team).where(
+        team_model.Team.id == team_id,
+        team_model.Team.enterprise_id == current_user.enterprise_id
+    ))
+
+    team = team_result.scalar_one_or_none()
+
+    if not project or not team:             # verify team or project exists
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="project or team not found or you do not have access to them",
@@ -142,14 +140,12 @@ async def assign_project(
             detail="project and team do not belong to the same enterprise",
         )
     try:
-        assigned_project = insert(ProjectTeams).values(
-            project_id=project_id, team_id=team_id
-        )
-        db.add(assigned_project)
-        db.commit()
-        db.refresh(assigned_project)
-        logger.info(f"Project assigned : {project_id} to Team:{team_id}")
+        assigned_project = await db.execute(insert(ProjectTeams)
+                                            .values(project_id=project_id,team_id=team_id))
+        
+        await db.commit()
+        logger.info(f"Project {project_id} assigned to Team:{team_id}")
     except Exception as e:
-        db.rollback()
+        await db.rollback()
         logger.error("DB ERROR: %s", e)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR)
