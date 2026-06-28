@@ -3,7 +3,7 @@ This file maintain configs like secretkeys,passwords, and database related info
 """
 
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import EmailStr
+from pydantic import EmailStr, Field
 from sqlalchemy import URL
 
 
@@ -14,12 +14,12 @@ class DatabaseConfig(BaseSettings):
         env_file=".env", env_file_encoding="utf-8", case_sensitive=False
     )
 
-    drivername: str
-    username: str
-    password: str
-    host: str
-    port: int
-    database: str
+    drivername: str = Field(alias="DB_DRIVERNAME")
+    username: str = Field(alias="DB_USERNAME")
+    password: str = Field(alias="DB_PASSWORD")
+    host: str = Field(alias="DB_HOST")
+    port: int = Field(alias="DB_PORT")
+    database: str = Field(alias="DB_DATABASE")
 
     # build connection with database
     def build_connection(self) -> URL:

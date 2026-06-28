@@ -11,7 +11,7 @@ class InvitationDB(BaseModel):
     email: EmailStr
     role: str
     token: str
-    enterprise_id: int
+    workspace_id: int
     invited_by: int
     status: t.Literal["pending", "accepted", "declined"]
     expires_at: datetime

@@ -9,14 +9,14 @@ class CreateProject(BaseModel):
 
     title: str
     description: str
-    dead_line: datetime
+    deadline: datetime
 
 # update project model for optional fields
 class UpdateProject(BaseModel):
 
     title: Optional[str]
     description: Optional[str]
-    dead_line: Optional[datetime]
+    deadline: Optional[datetime]
 
 # response model for project details with teams and creator details
 class ProjectResponse(BaseModel):
@@ -25,7 +25,7 @@ class ProjectResponse(BaseModel):
     title: str
     description: str
     starting_at: datetime
-    dead_line: datetime
+    deadline: datetime
     teams: list[TeamRead] = []  # return list of teams assigned to this project 
     created_by: UserMinRead = Field(alias='created_by') # return creator details in response
 

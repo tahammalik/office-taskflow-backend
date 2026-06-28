@@ -1,5 +1,5 @@
 from fastapi import FastAPI , status
-from app.api.v1 import tasks, authentication,enterprise_auth,teams,projects
+from app.api.v1 import tasks, authentication,workspace_auth,teams,projects
 from app.core.db import Base,engine
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.requests import Request
@@ -17,7 +17,7 @@ async def lifespan(app: FastAPI):
 
       yield 
 
-app = FastAPI(title="Office TaskFlow - Enterprise Edition",lifespan=lifespan)
+app = FastAPI(title="Office TaskFlow",lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
@@ -48,7 +48,7 @@ async def account_locked_error(request: Request, exc: AccountLockedError):
     )
 
 app.include_router(authentication.router)
-app.include_router(enterprise_auth.router)
+app.include_router(workspace_auth.router)
 app.include_router(projects.router)
 app.include_router(tasks.router)
 app.include_router(teams.router)
@@ -56,6 +56,6 @@ app.include_router(teams.router)
 
 @app.get("/")
 async def home():
-    return {"message": "server is running - Enterprise Edition"}
+    return {"message": "server is running"}
 
 

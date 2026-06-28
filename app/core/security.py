@@ -47,7 +47,7 @@ def verify_password(hashed_password, plain_password: str):
 
 
 # create access token using jwt
-def create_access_token(
+async def create_access_token(
     data: dict, expire_timedelta: timedelta = (timedelta(minutes=30))
 ):
     to_encode = data.copy()
@@ -61,7 +61,7 @@ def create_access_token(
 
 
 # create refresh token using jwt
-def create_refresh_token(
+async def create_refresh_token(
     data: dict, expire_timedelta: timedelta = (timedelta(days=15))
 ):
     to_refresh_encode = data.copy()

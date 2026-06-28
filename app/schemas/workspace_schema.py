@@ -4,12 +4,12 @@ from typing import Optional
 from pydantic import BaseModel, EmailStr
 
 
-class CreateEnterprise(BaseModel):
+class CreateWorkspace(BaseModel):
     name: str
     email: EmailStr
 
 
-class ResponseEnterprise(BaseModel):
+class ResponseWorkspace(BaseModel):
     id: int
     name: str
     email: EmailStr
@@ -20,7 +20,7 @@ class ResponseEnterprise(BaseModel):
         from_attributes = True
 
 
-class UpdateEnterprise(BaseModel):
+class UpdateWorkspace(BaseModel):
     name: Optional[str]
     email: Optional[EmailStr]
     is_active: Optional[bool]

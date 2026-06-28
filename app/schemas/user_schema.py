@@ -22,7 +22,7 @@ class UserResponse(UserBase):
     id: int
     role: str
     is_active: bool
-    enterprise_id: Optional[int] = None
+    workspace_id: Optional[int] = None
     created_at: datetime
 
     class Config:
@@ -33,13 +33,13 @@ class UserUpdate(BaseModel):
     username: Optional[str] = None
     email: Optional[EmailStr] = None
     role: Optional[str] = None
-    enterprise_id: Optional[int] = None
+    workspace_id: Optional[int] = None
 
 
 class UserMinRead(BaseModel):
     id: int
     username: str
-    enterprise_id: int
+    workspace_id: int
     role: str
     created_at: datetime
 

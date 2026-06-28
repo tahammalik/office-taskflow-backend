@@ -29,9 +29,9 @@ async def create_projects(
     new_project = Project(
         title=project_data.title,
         description=project_data.description,
-        dead_line=project_data.dead_line,
+        deadline=project_data.deadline,
         created_by=current_user.id,
-        enterprise_id=current_user.enterprise_id,
+        workspace_id=current_user.workspace_id,
     )
     try:
         db.add(new_project)
@@ -48,7 +48,7 @@ async def create_projects(
         )
 
 
-# show all projects according to users enterprise id
+# show all projects according to users workspace id
 @router.get(
     "/show",
     response_model=list[ProjectResponse],
@@ -59,7 +59,7 @@ async def show_projects(
 ):
 
     result = await db.execute(select(Project).where(
-        Project.enterprise_id == current_user.enterprise_id
+        Project.workspace_id == current_user.workspace_id
         ))
     projects = result.scalars().all()
     if not projects:
@@ -78,7 +78,7 @@ async def delete_project(
 
     result = await db.execute(select(Project).where(
         Project.id == project_id,
-        Project.enterprise_id == current_user.enterprise_id,
+        Project.workspace_id == current_user.workspace_id,
     ))
 
     project = result.scalar_one_or_none()
@@ -117,14 +117,14 @@ async def assign_project(
 ):
     project_result = await db.execute(select(Project).where(
         Project.id == project_id,
-        Project.enterprise_id == current_user.enterprise_id
+        Project.workspace_id == current_user.workspace_id
     ))
 
     project = project_result.scalar_one_or_none()
     
     team_result = await db.execute(select(team_model.Team).where(
         team_model.Team.id == team_id,
-        team_model.Team.enterprise_id == current_user.enterprise_id
+        team_model.Team.workspace_id == current_user.workspace_id
     ))
 
     team = team_result.scalar_one_or_none()
@@ -134,10 +134,10 @@ async def assign_project(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="project or team not found or you do not have access to them",
         )
-    if cast(int, project.enterprise_id) != cast(int, team.enterprise_id):
+    if cast(int, project.workspace_id) != cast(int, team.workspace_id):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="project and team do not belong to the same enterprise",
+            detail="project and team do not belong to the same workspace",
         )
     try:
         assigned_project = await db.execute(insert(ProjectTeams)

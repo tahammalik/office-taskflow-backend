@@ -16,12 +16,12 @@ class Project(Base):
     id = Column(Integer, primary_key=True, index=True)
     title = Column(String, nullable=False)
     description = Column(String)
-    dead_line = Column(DateTime)
+    deadline = Column(DateTime)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=func.now())
     created_by = Column(Integer, ForeignKey('users.id'))
-    enterprise_id = Column(Integer, ForeignKey('enterprises.id'))
+    workspace_id = Column(Integer, ForeignKey('workspaces.id'))
 
     # Relationships
-    enterprise = relationship('Enterprise', back_populates='projects')
-    teams = relationship('Team', secondary=ProjectTeams, back_populates='projects')
+    workspace = relationship('Workspace', back_populates='projects')
+    teams = relationship('Team', secondary="project_teams", back_populates='projects')

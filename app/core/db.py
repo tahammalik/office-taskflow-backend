@@ -4,10 +4,8 @@ database connections and sessions.
 """
 
 from typing import Annotated
-
 from fastapi.params import Depends
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-
 # from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase
 

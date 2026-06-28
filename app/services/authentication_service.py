@@ -36,7 +36,7 @@ def user_to_response(user: User) -> dict:
         "id": user.id,
         "username": user.username,
         "role": user.role,
-        "organization": user.enterprise_id,
+        "workspace": user.workspace_id,
     }
 
 

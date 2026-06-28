@@ -16,7 +16,7 @@ from app.models.refresh_token import RefreshToken
 from app.schemas.token_schema import Token,TokenResponse
 from app.schemas.user_schema import UserCreate, UserResponse
 from app.services.authentication_service import authenticate_user, find_email
-from datetime import datetime,timezone,timedelta
+
 
 # from app.core.dependencies import require_role, get_current_user
 
@@ -72,9 +72,12 @@ async def login(
 
     access_token = await create_access_token(data={"sub": str(user.id)})
     refresh_token = await create_refresh_token(data={"sub": str(user.id)})
-    
-    return {"access_token":access_token,"refresh_token":refresh_token}
 
+    return TokenResponse(
+        access_token=access_token,
+        refresh_token=refresh_token,
+        token_type="bearer",
+    )
 
 @router.get("/me", response_model=UserResponse)
 async def get_me(current_user: Annotated[User, Depends(get_current_user)]):
