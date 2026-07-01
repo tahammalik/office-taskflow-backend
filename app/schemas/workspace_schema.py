@@ -15,6 +15,7 @@ class ResponseWorkspace(BaseModel):
     email: EmailStr
     is_active: bool
     created_at: datetime
+    projects: Optional[list] = []
 
     class Config:
         from_attributes = True
