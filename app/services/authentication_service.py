@@ -68,6 +68,18 @@ def _get_failed_attempt_key(username: str) -> str:
 def _get_locked_key(username: str) -> str:
     return f"{REDIS_KEY_PREFIX}locked:{username}"
 
+# record failed attempts in redis
+def record_failed_attempt_redis(username: str):
+
+    r = get_redis_client()
+    attempt_key = _get_failed_attempt_key(username=username)
+    locked_key = _get_locked_key(username=username)
+    attempts = r.incr(attempt_key)
+  
+    if attempts == 1:
+        r.expire(attempt_key, LOCKOUT_DURATION_MINUTES * 60)
+    if attempts == MAX_FAILED_ATTEMPTS:
+        r.setex(locked_key, LOCKOUT_DURATION_MINUTES * 60, "locked")
 
 # redis check that user is lockout or not
 def check_account_lockout_redis(username: str):
@@ -79,21 +91,6 @@ def check_account_lockout_redis(username: str):
         raise AccountLockedError(
             message=f"Account locked.Try again after {ttl} seconds"
         )
-
-
-# record failed attempts in redis
-def record_failed_attempt_redis(username: str):
-
-    r = get_redis_client()
-    attempt_key = _get_failed_attempt_key(username=username)
-    locked_key = _get_locked_key(username=username)
-    attempts = r.incr(attempt_key)
-
-    if attempts == 1:
-        r.expire(attempt_key, LOCKOUT_DURATION_MINUTES * 60)
-    if attempts == MAX_FAILED_ATTEMPTS:
-        r.setex(locked_key, LOCKOUT_DURATION_MINUTES * 60, "locked")
-
 
 # reset failed attempts after specific time(default=30min)
 def reset_failed_attempts_redis(username: str):
@@ -119,9 +116,13 @@ async def authenticate_user(
 
     if not user:
         verify_password(SecretConfig().dummy_hash, plain_password=plain_password)
+        try:
+            record_failed_attempt_redis(username=username)
+        except RedisError:
+            logger.warning("Failed to record login attempt for %s", username)
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="incorrect password or wrong user",
+            detail="incorrect username or password",
         )
     # password verification
     if not verify_password(user.password, plain_password):
@@ -130,7 +131,8 @@ async def authenticate_user(
 
         except RedisError:
             logger.warning("Failed to record login attempt for %s", username)
-            raise HTTPException(
+
+        raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Incorrect username or password",
             )
