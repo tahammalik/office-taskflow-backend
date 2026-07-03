@@ -20,6 +20,7 @@ class User(Base):
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, default=func.now())
     workspace_id = Column(Integer, ForeignKey("workspaces.id"), default=None)
+    team_id = Column(Integer,default=None)
 
     # Relationships
     workspace = relationship("Workspace", foreign_keys=[workspace_id], back_populates="users")
