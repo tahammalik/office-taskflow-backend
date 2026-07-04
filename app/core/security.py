@@ -9,7 +9,9 @@ email verification etc in future.
 
 from datetime import datetime, timedelta, timezone
 from logging import getLogger
-
+import os
+from redis_client import get_redis_client
+from fastapi import HTTPException
 import jwt
 from argon2 import PasswordHasher
 from argon2.exceptions import VerifyMismatchError
@@ -66,10 +68,41 @@ async def create_refresh_token(
 ):
     to_refresh_encode = data.copy()
     expire = datetime.now(timezone.utc) + expire_timedelta
-    to_refresh_encode.update({"exp": expire})
+    jti = os.urandom(16).hex()
+    to_refresh_encode.update({"exp": expire,"type": "refresh","jti":jti})
 
     refresh_encode_jwt = jwt.encode(
         to_refresh_encode, secrets.secret_key, algorithm=secrets.algorithm
     )
+    ttl = int(expire.timestamp() - datetime.now(timezone.utc).timestamp())
+    get_redis_client().setex(f"refresh_token:{jti}",ttl,"valid")
 
     return refresh_encode_jwt
+lua_script = """
+if redis.call('GET',KEYS[1]) == ARGV[1] then
+    return redis.call("DEL", KEYS[1])
+else
+    return 0
+end
+"""
+atomic_check_and_delete = get_redis_client().register_script(lua_script)
+
+async def decode_token(token:str, expected_type:str):
+    try:
+        payload = jwt.decode(token,secrets.secret_key, algorithms=[secrets.algorithm])
+
+        if payload.get("type") != expected_type:
+            raise HTTPException(
+                status_code=401,
+                detail="Invalid token type"
+            )
+        return payload
+    except Exception as e:
+        logger.error("Exception error!")
+
+async def is_refresh_token_valid_and_revoke(jti: str) -> bool:
+    result = atomic_check_and_delete(keys=f"refresh_token:{jti}",args=["valid"])
+    return result == 1
+
+async def revoke_refresh_token(jti:str):
+    return get_redis_client().delete(f"refresh_token:{jti}")
