@@ -6,9 +6,7 @@ database connections and sessions.
 from typing import Annotated
 from fastapi.params import Depends
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
-# from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase
-
 from app.core.config import DatabaseConfig
 from app.core.logging_config import get_logger
 
@@ -28,7 +26,7 @@ async def init_db():
         except Exception as e:
             logger.error("Engine Error: %s", e)
 
-sessionlocal = async_sessionmaker(autoflush=False, autocommit=False, bind=engine)
+sessionlocal = async_sessionmaker(autoflush=False, autocommit=False, bind=engine,expire_on_commit=False)
 
 
 class Base(DeclarativeBase):
