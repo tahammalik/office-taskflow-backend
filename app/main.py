@@ -6,16 +6,17 @@ from fastapi.requests import Request
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 from app.core.exceptions import *
-
+import uvicorn
 
 #Base.metadata.create_all(bind=engine)
 #Base.metadata.create_all(bind=engine)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-      async with engine.begin() as conn:
+        async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
-      yield 
+        yield 
+        await engine.dispose()
 
 app = FastAPI(title="Office TaskFlow",lifespan=lifespan)
 
