@@ -46,7 +46,12 @@ async def create_workspace(
                          .where(User.id == current_user.id)
                          .values(role="admin", workspace_id=new_workspace.id))
         await db.commit()
-        await db.refresh(new_workspace)
+
+        result = await db.execute(select(Workspace)
+                                  .where(Workspace.id == new_workspace.id)
+                                  .options(Workspace.projects))
+
+        return result.scalar_one_or_none()
     except Exception as e:
         logger.error("DB ERROR: %s", e)
         raise HTTPException(
@@ -54,7 +59,6 @@ async def create_workspace(
             detail="Database error occurred",
         )
 
-    return new_workspace
 
 
 # Workspace deletion (soft delete only)
@@ -80,11 +84,26 @@ async def delete_workspace(workspace_id: int, db: db_dependency, current_user: U
             detail="Workspace is already inactive",
         )
     try:
-        await db.execute(update(User).where(User.id == current_user.id).values({"workspace_id": None, "role": "user"}))
-        await db.execute(update(Workspace).where(Workspace.id == current_user.workspace_id).values(is_active = False))
-        await db.execute(update(Project).where(Project.workspace_id == current_user.workspace_id).values(is_deleted=True))
-        await db.execute(update(Task).where(Task.workspace_id == current_user.workspace_id).values(is_deleted=True))
-        await db.execute(update(Team).where(Team.workspace_id == current_user.workspace_id).values(is_deleted=True))
+        await db.execute(update(Workspace)
+                         .where(Workspace.id == workspace_id)
+                         .values(is_active=False)
+        )
+        await db.execute(update(User)
+                         .where(User.workspace_id == current_user.workspace_id)
+                         .values({"workspace_id": None, "role": "user"})
+        )
+        await db.execute(update(Project)
+                         .where(Project.workspace_id == current_user.workspace_id)
+                         .values(is_deleted=True)
+        )
+        await db.execute(update(Task)
+                         .where(Task.workspace_id == current_user.workspace_id)
+                         .values(is_deleted=True)
+        )
+        await db.execute(update(Team)
+                         .where(Team.workspace_id == current_user.workspace_id)
+                         .values(is_deleted=True)
+                         )
         await db.commit()
         logger.info(f"Workspace {workspace_id} deleted successfully.")
         
