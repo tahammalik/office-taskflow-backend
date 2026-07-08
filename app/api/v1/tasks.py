@@ -1,13 +1,14 @@
 """
 this file maintains request of tasks
 """
+from sqlalchemy.orm import selectinload
 from sqlalchemy import select
-from typing import List, cast
+from typing import List, cast,Annotated
 from fastapi import APIRouter, Depends, HTTPException, status
 from app.core.db import db_dependency
 from app.core.dependencies import get_current_user, require_role
 from app.core.logging_config import get_logger
-from app.models import task_model, team_model, user_model, workspace_model
+from app.models import task_model, team_model, user_model, workspace_model,taskhistory_model
 from app.schemas.task_schema import CreateTask, ResponseTask,TaskUpdate
 
 router = APIRouter(prefix="/v1/task", tags=["Tasks"])
@@ -28,7 +29,7 @@ async def add_new_task(
 ):
     # verify the team belongs to current user workspace
     team_result = await db.execute(select(team_model.Team).where(
-        team_model.Team.id == current_user.team_id,
+        team_model.Team.id == task_data.team_id,
         team_model.Team.workspace_id == current_user.workspace_id
     ))
 
@@ -48,7 +49,7 @@ async def add_new_task(
     result_assigned_user = await db.execute(select(user_model.User).where(
         user_model.User.id == task_data.assign_to,
         user_model.User.workspace_id == current_user.workspace_id,
-        user_model.User.team_id == current_user.team_id
+        user_model.User.team_id == task_data.team_id
     ))
     assigned_user = result_assigned_user.scalar_one_or_none()
 
@@ -73,7 +74,9 @@ async def add_new_task(
         await db.commit()
         await db.refresh(new_task)
         logger.info(f"task created with title:{task_data.title}.")
-        return new_task
+        result = await db.execute(select(task_model.Task).where(task_model.Task.id == new_task.id)
+                                  .options(selectinload(task_model.Task.assigned_employee,task_model.Task.creator_manager)))
+        return result.scalar_one_or_none()
     except Exception as e:
         logger.error(f"Database connection error! {e}")
         raise HTTPException(
@@ -85,11 +88,11 @@ async def add_new_task(
 async def update_task_status(task_id:int,
                              task_data:TaskUpdate,
                              db: db_dependency,
-                             current_user: Annoted[user_model.User,Depends(get_current_user)]
+                             current_user: Annotated[user_model.User,Depends(get_current_user)]
 ):
-    result = await db.execute(Select(task_model.Task).join(
-        team_model.Team, team_model.Team.id == task_model.Task.team_id,
-    ).where(workspace_model.Workspace.id == task_data.workspace_id).where(
+    result = await db.execute(select(task_model.Task).join(
+        team_model.Team, team_model.Team.id == current_user.team_id,
+    ).where(workspace_model.Workspace.id == current_user.workspace_id).where(
         task_model.Task.id == task_id
     ))
     task = result.scalar_one_or_none()
@@ -118,7 +121,7 @@ async def update_task_status(task_id:int,
                 detail = f"Employees can only update status. Not allowed: {not_allowed}",
             )
     if "status" in update_data:
-        history = TaskStatusHistory(
+        history = taskhistory_model.TaskHistory(
             task_id=task.id,
             changed_by=current_user.id,
             old_status=task.status,
@@ -149,7 +152,7 @@ async def get_my_tasks(
     try:
         result_tasks = await db.execute(select(task_model.Task).where(
             task_model.Task.assign_to == current_user.id
-        ))
+        ).options(selectinload(task_model.Task.assigned_employee,task_model.Task.creator_manager)))
 
         tasks = result_tasks.scalars().all()
         
