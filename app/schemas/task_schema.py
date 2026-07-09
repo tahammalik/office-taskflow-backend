@@ -10,7 +10,7 @@ from app.schemas.user_schema import UserMinRead
 class CreateTask(BaseModel):
     title: str = Field(..., max_length=50)
     description: str
-    status: Literal["todo", "in_progress", "review", "done"]
+    status: Literal["pending", "in_progress", "review", "completed"]
     dead_line: datetime
     team_id: int
     assign_to: int  # user id of the employee to whom the task is assigned
@@ -41,7 +41,7 @@ class TaskUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     assign_to: Optional[int] = None  # param:id so datatype is int
-    status: Optional[Literal["todo", "in_progress", "review", "done"]] = None
+    status: Optional[Literal["pending", "in_progress", "review", "done"]] = None
     status_comment: Optional[str] = None
     dead_line: Optional[datetime] = None
 
