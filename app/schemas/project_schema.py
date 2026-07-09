@@ -1,6 +1,6 @@
 from pydantic import BaseModel, ConfigDict,Field
 from datetime import datetime
-from typing import Optional
+from typing import Optional,Literal
 from app.schemas.team_schema import TeamRead
 from app.schemas.user_schema import UserMinRead
 
@@ -10,6 +10,7 @@ class CreateProject(BaseModel):
     title: str
     description: str
     deadline: datetime
+    status: Literal["planning", "active", "on_hold","review", "completed", "archived"]
 
 # update project model for optional fields
 class UpdateProject(BaseModel):
