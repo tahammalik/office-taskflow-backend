@@ -8,7 +8,10 @@ from app.core.db import Base
 class TaskStatus(str,enum.Enum):
     PENDING = "pending"
     IN_PROGRESS = "in_progress"
+    REVIEW = "review"
     COMPLETED = "completed"
+    #FAILED = "failed"
+
 class Task(Base):
     __tablename__ = 'tasks'
 
@@ -19,7 +22,7 @@ class Task(Base):
 
     created_at = Column(DateTime, server_default=func.now())
     deadline = Column(DateTime,nullable=False)
-    updated_at = Column(DateTime,server_default=func.now(), onupdate=func.now())
+    updated_at = Column(DateTime,server_default=func.now(), onupdate=func.now(),default=None)
     is_deleted = Column(Boolean, default=False)
     # Foreign Keys
     team_id = Column(Integer, ForeignKey('teams.id'), nullable=False)
