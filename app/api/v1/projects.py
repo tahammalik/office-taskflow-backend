@@ -7,8 +7,8 @@ from app.core.db import db_dependency
 from app.core.dependencies import get_current_user, require_role
 from app.core.logging_config import get_logger
 from app.models import team_model, user_model
-from app.models.project_model import Project, ProjectTeams
-from app.schemas.project_schema import CreateProject, ProjectResponse
+from app.models.project_model import Project, ProjectTeams,ProjectHistory
+from app.schemas.project_schema import CreateProject, ProjectResponse,UpdateProject
 
 router = APIRouter(prefix="/v1/projects", tags=["Projects"])
 
@@ -55,10 +55,67 @@ async def create_projects(
         response_model=ProjectResponse,
         dependencies=[Depends(require_role(["admin", "manager"]))]
 )
-async def update_project(project_id:int,db:db_dependency):
-    pass
+async def update_project(
+    project_id:int,
+    update_data:UpdateProject,
+    db:db_dependency,
+    current_user:user_model.User = Depends(get_current_user)
+):
+    # Fetch the project with proper permissions
+    if current_user.role == "admin":
+        project = await db.scalar(
+            select(Project).where(
+                Project.id == project_id,
+                Project.workspace_id == current_user.workspace_id
+            )
+        )
+    else:   # Manager
+        project = await db.scalar(
+            select(Project).where(
+                Project.id == project_id,
+                Project.created_by == current_user.id,
+                Project.workspace_id == current_user.workspace_id
+            )
+        )
+    if not project:
+        raise HTTPException(404, detail="Project not found or not accessible")
+    
+    # Extra safety check (though query already enforces it)
+    if current_user.role == "manager" and project.created_by != current_user.id:
+        raise HTTPException(403, detail="You can only update projects you created")
+    
+    update_dict = update_data.model_dump(exclude_unset=True)
+    if not update_dict:
+        raise HTTPException(400, detail="No fields provided to update")
 
-# show all projects according to users workspace id
+    history_entries = []
+    for field,new_value in update_dict.items():
+        old_value = getattr(project,field)
+        if old_value != new_value:
+            history_entries.append(
+                ProjectHistory(
+                    project_id=project.id,
+                    changed_by=current_user.id,
+                    field_name=field,
+                    old_value=str(old_value) if old_value is not None else None,
+                    new_value=str(new_value) if new_value is not None else None
+                )
+            )
+    
+    for key,value in update_dict.items():
+        setattr(project,key,value)
+    try:
+        for entry in history_entries:
+            db.add(entry)
+        await db.commit()
+        await db.refresh(project)
+        logger.info(f"Project {project_id} updated by user {current_user.id}")
+        return project
+    except Exception as e:
+        await db.rollback()
+        logger.error("DB ERROR: %s", e)
+        raise HTTPException(500, detail="Database error occurred")
+
 @router.get(
     "/show",
     response_model=list[ProjectResponse],
@@ -90,13 +147,14 @@ async def delete_project(
                 Project.workspace_id == current_user.workspace_id
             )
         )
-    project = await db.scalar(
-        select(Project).where(
-            Project.id == project_id,
-            Project.created_by == current_user.id,
-            Project.workspace_id == current_user.workspace_id
+    else:
+        project = await db.scalar(
+            select(Project).where(
+                Project.id == project_id,
+                Project.created_by == current_user.id,
+                Project.workspace_id == current_user.workspace_id
+            )
         )
-    )
     
     if not project:
         raise HTTPException(404,detail="Project not found")
