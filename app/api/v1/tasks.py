@@ -28,12 +28,13 @@ async def add_new_task(
     current_user: user_model.User = Depends(get_current_user),
 ):
     # verify the team belongs to current user workspace
-    team_result = await db.execute(select(team_model.Team).where(
-        team_model.Team.id == task_data.team_id,
-        team_model.Team.workspace_id == current_user.workspace_id
-    ))
-
-    team = team_result.scalar_one_or_none()
+    team = await db.scalar(
+        select(team_model.Team).where(
+            team_model.Team.id == task_data.team_id,
+            team_model.Team.workspace_id == current_user.workspace_id,
+            team_model.Team.is_active == True
+        )
+    )
     
     if not team:
         raise HTTPException(
@@ -46,12 +47,14 @@ async def add_new_task(
             status_code=status.HTTP_403_FORBIDDEN, detail="You are not leader"
         )
     # verify the assign user belongs to same workspace
-    result_assigned_user = await db.execute(select(user_model.User).where(
-        user_model.User.id == task_data.assign_to,
-        user_model.User.workspace_id == current_user.workspace_id,
-        user_model.User.team_id == task_data.team_id
-    ))
-    assigned_user = result_assigned_user.scalar_one_or_none()
+    assigned_user = await db.scalar(
+        select(user_model.User).where(
+            user_model.User.id == task_data.assign_to,
+            user_model.User.workspace_id == current_user.workspace_id,
+            user_model.User.team_id == task_data.team_id,
+            user_model.User.is_active == True
+        )
+    )
 
     if not assigned_user:  # its ensure that assigned_user is None or not
         raise HTTPException(
@@ -61,7 +64,7 @@ async def add_new_task(
     new_task = task_model.Task(
         title=task_data.title,
         description=task_data.description,
-        status="todo",
+        status=task_data.status,
         dead_line=task_data.dead_line,
         team_id=task_data.team_id,
         assign_to=task_data.assign_to,
@@ -74,9 +77,15 @@ async def add_new_task(
         await db.commit()
         await db.refresh(new_task)
         logger.info(f"task created with title:{task_data.title}.")
-        result = await db.execute(select(task_model.Task).where(task_model.Task.id == new_task.id)
-                                  .options(selectinload(task_model.Task.assigned_employee,task_model.Task.creator_manager)))
-        return result.scalar_one_or_none()
+        task = await db.scalar(
+            select(task_model.Task)
+            .where(task_model.Task.id == new_task.id)
+            .options(
+                selectinload(task_model.Task.assigned_employee),
+                selectinload(task_model.Task.creator_manager)
+            )
+        )
+        return task
     except Exception as e:
         logger.error(f"Database connection error! {e}")
         raise HTTPException(
@@ -90,18 +99,38 @@ async def update_task_status(task_id:int,
                              db: db_dependency,
                              current_user: Annotated[user_model.User,Depends(get_current_user)]
 ):
-    result = await db.execute(select(task_model.Task).join(
-        team_model.Team, team_model.Team.id == current_user.team_id,
-    ).where(workspace_model.Workspace.id == current_user.workspace_id).where(
-        task_model.Task.id == task_id
-    ))
-    task = result.scalar_one_or_none()
+    if current_user.role == "admin":
+        task = await db.scalar(
+        select(task_model.Task).where(
+            task_model.Task.id == task_id,
+            task_model.Task.workspace_id == current_user.workspace_id
+        )
+    )
+    elif current_user.role == "manager":
+        task = await db.scalar(
+        select(task_model.Task)
+        .join(team_model.Team, team_model.Team.id == task_model.Task.team_id)
+        .where(
+            task_model.Task.id == task_id,
+            task_model.Task.workspace_id == current_user.workspace_id,
+            team_model.Team.leader_id == current_user.id
+        )
+    )
+    else:
+        task = await db.scalar(
+            select(task_model.Task).where(
+                task_model.Task.id == task_id,
+                task_model.Task.team_id == current_user.team_id,
+                task_model.Task.workspace_id == current_user.workspace_id
+            )
+        )
+
     if not task:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Task not found or not in your workspace",
         )
-    if current_user.role == "user" and current_user.id != task_data.assign_to:
+    if current_user.role == "user" and current_user.id != task.assign_to:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="You can only update your own task",
@@ -150,11 +179,14 @@ async def get_my_tasks(
     db: db_dependency, current_user: user_model.User = Depends(get_current_user)
 ):
     try:
-        result_tasks = await db.execute(select(task_model.Task).where(
-            task_model.Task.assign_to == current_user.id
-        ).options(selectinload(task_model.Task.assigned_employee,task_model.Task.creator_manager)))
-
-        tasks = result_tasks.scalars().all()
+        tasks = await db.scalars(
+            select(task_model.Task)
+            .where(task_model.Task.assign_to == current_user.id)
+            .options(
+                selectinload(task_model.Task.assigned_employee),
+                selectinload(task_model.Task.creator_manager)
+            )
+        )
         
         return tasks
 
@@ -165,41 +197,36 @@ async def get_my_tasks(
             detail="Database error occurred",
         )
 
-# only managers/admin can see there task and progress
-@router.get(
-    "/progress",
-    dependencies=[Depends(require_role(["manager", "admin"]))],
-    response_model=List[ResponseTask],
-)
+@router.get("/progress", dependencies=[Depends(require_role(["manager", "admin"]))], response_model=List[ResponseTask])
 async def see_progress(
-    db: db_dependency, current_user: user_model.User = Depends(get_current_user)
+    db: db_dependency,
+    current_user: Annotated[user_model.User,Depends(get_current_user)]
 ):
-
     try:
         if current_user.role == "admin":
-            result = await db.execute(
+            # Admin sees ALL tasks in the workspace
+            query = select(task_model.Task).where(
+                task_model.Task.workspace_id == current_user.workspace_id
+            )
+        else:
+            # Manager sees only tasks from teams they lead
+            query = (
                 select(task_model.Task)
                 .join(team_model.Team, team_model.Team.id == task_model.Task.team_id)
-                .where(team_model.Team.workspace_id == current_user.workspace_id))
-            
-            tasks = result.scalars().all()
-
-            return tasks
-        else:
-
-            result_task = await db.execute(select(task_model.Task).join(
-                team_model.Team, team_model.Team.id == task_model.Task.team_id,
-            ).filter(
-                team_model.Team.leader_id == current_user.id,
-                team_model.Team.workspace_id == current_user.workspace_id,
-            ))
-
-        task = result_task.scalars().all()
-        return task
-            
-    except Exception as e:
-        logger.error("DB ERROR: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database error occurred",
+                .where(
+                    team_model.Team.leader_id == current_user.id,
+                    team_model.Team.workspace_id == current_user.workspace_id
+                )
+            )
+        
+        # Optionally eager-load relationships if your response schema needs them
+        query = query.options(
+            selectinload(task_model.Task.assign_to),
+            selectinload(task_model.Task.created_by)
         )
+        
+        tasks = (await db.execute(query)).scalars().all()
+        return tasks
+    except Exception as e:
+        logger.error(f"DB ERROR: %s", e)
+        raise HTTPException(500, "Database error occurred")
