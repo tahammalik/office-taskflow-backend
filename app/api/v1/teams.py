@@ -1,4 +1,5 @@
-import re
+
+from sqlalchemy.orm import selectinload
 from typing import List
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, update
@@ -7,6 +8,7 @@ from app.core.dependencies import get_current_user, require_role
 from app.core.logging_config import get_logger
 from app.models.user_model import User
 from app.models.team_model import Team
+from app.models.project_model import Project
 from app.schemas.project_schema import ProjectResponse
 from app.schemas.team_schema import CreateTeam, TeamResponse
 
@@ -45,7 +47,7 @@ async def add_new_team(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Database error occurred",
         )
-
+# append
 
 # show all teams according to users workspace id
 @router.get(
@@ -54,15 +56,34 @@ async def add_new_team(
     dependencies=[Depends(require_role(["admin", "manager"]))],
 )
 async def show_teams(db: db_dependency, current_user: User = Depends(get_current_user)):
-    result = await db.execute(
-        select(Team).where(Team.workspace_id == current_user.workspace_id)
-    )
-    teams = result.scalars().all()
-    if not teams:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND, detail="Teams not found"
+    if current_user.role == "admin":
+        teams = (await db.scalars(
+            select(Team).where(
+                Team.workspace_id == current_user.workspace_id
+            ).options(
+                selectinload(Team.members),
+                selectinload(Team.projects)
+            )
+        )).all()
+        if not teams:
+            raise HTTPException(404,detail="teams doesn't exist")
+
+        return teams
+    else:
+        teams = await db.scalars(
+            select(Team).where(
+                Team.workspace_id == current_user.workspace_id,
+                Team.leader_id == current_user.id
+            ).options(
+                selectinload(Team.members),
+                selectinload(Team.projects)
+            )
         )
-    return teams
+        if not teams:
+            raise HTTPException(404,detail="teams doesn't exist")
+
+        return teams
+
 
 
 # delete team endpoint only admin can access this endpoint
@@ -70,16 +91,22 @@ async def show_teams(db: db_dependency, current_user: User = Depends(get_current
 async def delete_team(
     team_id: int, db: db_dependency, current_user: User = Depends(get_current_user)
 ):
-    team_result = await db.execute(
+    team = await db.scalar(
         select(Team).where(
-            Team.id == team_id, Team.workspace_id == current_user.workspace_id
+            Team.id == team_id,
+            Team.workspace_id == current_user.workspace_id
         )
     )
-    team = team_result.scalars().first()
+    
     if not team:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Team not found",
+        )
+    if team.is_deleted == True:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="team is already deleted"    
         )
     try:
         await db.execute(
@@ -101,72 +128,73 @@ async def delete_team(
 async def show_projects(
     team_id: int, db: db_dependency, current_user: User = Depends(get_current_user)
 ):
-    user_result = await db.execute(
-        select(User).where(
-            User.id == current_user.id, User.workspace_id == current_user.workspace_id
-        )
-    )
-    user = user_result.scalars().first()
-    team_result = await db.execute(
+
+
+    team = await db.scalar(
         select(Team).where(
-            Team.id == team_id, Team.workspace_id == current_user.workspace_id
+            Team.id == team_id,
+            Team.workspace_id == current_user.workspace_id,
+            Team.is_deleted == False
+        ).options(
+            selectinload(Team.projects),
+            selectinload(Project.teams)
         )
     )
-    team = team_result.scalars().first()
+    
     if not team:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Team not found"
         )
-    if current_user.role == "user" and current_user.id != team.leader_id and team_id not in user.team_id:
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not authorized to view this team's projects.",
-        )
+
+    if current_user.role == "user" and current_user.team_id != team_id and current_user.id != team.leader_id:
+        raise HTTPException(403, "Not authorized to view this team's projects")
 
     # Check if user is in the team (either leader or has a task in the team, simplified check)
     # For now, just allow if they are in the same workspace
     return team.projects
 
 # Assign user to team endpoint only admin and team leader/manager can access this endpoint
-@router.post("/{user_id}/{team_id}/assign",dependencies=[Depends(require_role(["admin","manager"]))])
+@router.post("/assign/{user_id}/{team_id}",dependencies=[Depends(require_role(["admin","manager"]))])
 async def assign_user_to_team(user_id: int, team_id: int, db: db_dependency, current_user: User = Depends(get_current_user)):
     
-    result_team = await db.execute(select(Team).where(
-        Team.id == team_id,
-        Team.workspace_id == current_user.workspace_id
-    ))
-
-    team = result_team.scalar_one_or_none()
-    
+    team = await db.scalar(
+        select(Team).where(
+            Team.id == team_id,
+            Team.workspace_id == current_user.workspace_id,
+            Team.is_active == True
+        )
+    )
     if not team:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="Team not found!"
-        )
-    if current_user.id != team.leader_id and current_user.role != "admin":
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail="You are not authorized to assign users to this team."
-        )
+        raise HTTPException(404, "Team not found")
 
-    assign_user = await db.execute(select(User).where(
-        User.workspace_id == current_user.workspace_id,
-        User.id == user_id
-    ))
-    user = assign_user.scalar_one_or_none()
-
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail="User not found!"
-        )
-    if user.team_id and user.team_id == team_id:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="User is already a member of this team."
-        )
+    if current_user.role != "admin" and team.leader_id != current_user.id:
+        raise HTTPException(403,detail="You have no permission to perform this task")
     
-    team.members.append(user_id)
-    user.team_id.append(team_id)
-    await db.commit()
-    return {"message": "User assigned to team successfully"}
+
+    assignee = await db.scalar(
+        select(User).where(
+            User.id == user_id,
+            User.workspace_id == current_user.workspace_id,
+            User.is_active == True
+        )
+    )
+
+    if not assignee:
+        raise HTTPException(404, "assignee not found")
+
+    if assignee.team_id == team_id:
+        raise HTTPException(409,detail="assignee already exist in this team")
+    
+    if assignee.team_id is not None:
+        logger.info(f"User {user_id} moved from team {assignee.team_id} to {team_id}")
+        
+    assignee.team_id = team_id
+
+    try:
+        await db.commit()
+        logger.info(f"User {user_id} assigned to Team {team_id}")
+        return {"message": "User assigned to team successfully"}
+    except Exception as e:
+        await db.rollback()
+        logger.error(f"DB ERROR: {e}")
+        raise HTTPException(500, "Database error occurred")
