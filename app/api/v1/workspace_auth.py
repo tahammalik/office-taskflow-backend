@@ -1,5 +1,4 @@
-from typing import cast
-
+from sqlalchemy.orm import selectinload
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import select, update
 from app.core.db import db_dependency
@@ -25,11 +24,13 @@ async def create_workspace(
     current_user: User = Depends(get_current_user),
 ):
     # search for email is already exist or not
-    result = await db.execute(select(Workspace)
-                               .where(Workspace.email == workspace_data.email))
-    search_ws = result.scalar_one_or_none()
+    existing = await db.scalar(
+            select(Workspace).where(
+                Workspace.email == workspace_data.email
+            )
+        )
     
-    if search_ws:
+    if existing:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Workspace with this email already exists",
@@ -41,18 +42,24 @@ async def create_workspace(
     )
     try:
         db.add(new_workspace)
-        await db.flush()
         await db.execute(update(User)
                          .where(User.id == current_user.id)
                          .values(role="admin", workspace_id=new_workspace.id))
         await db.commit()
 
-        result = await db.execute(select(Workspace)
-                                  .where(Workspace.id == new_workspace.id)
-                                  .options(Workspace.projects))
+        result = await db.scalar(
+            select(Workspace).where(
+                Workspace.id == new_workspace.id
+            ).options(
+                selectinload(Workspace.projects),
+                selectinload(Workspace.teams),
+                selectinload(Workspace.users)
+            )
+        )
 
-        return result.scalar_one_or_none()
+        return result
     except Exception as e:
+        await db.rollback()
         logger.error("DB ERROR: %s", e)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -62,7 +69,7 @@ async def create_workspace(
 
 
 # Workspace deletion (soft delete only)
-@router.delete("/delete/{workspace_id}", dependencies=[Depends(require_role(["admin"]))])
+@router.delete("/delete/{workspace_id}", dependencies=[Depends(require_role(["admin"]))],status_code=204)
 async def delete_workspace(workspace_id: int, db: db_dependency, current_user: User = Depends(get_current_user)):
 
     if current_user.workspace_id != workspace_id:
@@ -71,9 +78,13 @@ async def delete_workspace(workspace_id: int, db: db_dependency, current_user: U
             detail="You do not have access over this workspace.",
         )
 
-    result = await db.execute(select(Workspace).where(Workspace.id == workspace_id))
-    workspace = result.scalar_one_or_none()
-
+    workspace = await db.scalar(
+        select(Workspace).where(
+            Workspace.id == workspace_id,
+            Workspace.created_by == current_user.id
+        )
+    )
+   
     if not workspace:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND, detail="Workspace not found"
@@ -89,19 +100,19 @@ async def delete_workspace(workspace_id: int, db: db_dependency, current_user: U
                          .values(is_active=False)
         )
         await db.execute(update(User)
-                         .where(User.workspace_id == current_user.workspace_id)
+                         .where(User.workspace_id == workspace_id)
                          .values({"workspace_id": None, "role": "user"})
         )
         await db.execute(update(Project)
-                         .where(Project.workspace_id == current_user.workspace_id)
+                         .where(Project.workspace_id == workspace_id)
                          .values(is_deleted=True)
         )
         await db.execute(update(Task)
-                         .where(Task.workspace_id == current_user.workspace_id)
+                         .where(Task.workspace_id == workspace_id)
                          .values(is_deleted=True)
         )
         await db.execute(update(Team)
-                         .where(Team.workspace_id == current_user.workspace_id)
+                         .where(Team.workspace_id == workspace_id)
                          .values(is_deleted=True)
                          )
         await db.commit()
@@ -112,11 +123,16 @@ async def delete_workspace(workspace_id: int, db: db_dependency, current_user: U
         logger.error("DB ERROR: %s", e)
         raise HTTPException(status_code=500, detail="Database error occurred")
 
-@router.get("/list", response_model=list[ResponseWorkspace], dependencies=[Depends(require_role(["admin"]))])
+@router.get("/current", response_model=ResponseWorkspace, dependencies=[Depends(require_role(["admin"]))])
 async def list_workspaces(db: db_dependency,current_user: User = Depends(get_current_user)):
     try:
-        result = await db.execute(select(Workspace).where(Workspace.id == current_user.workspace_id))
-        workspace = result.scalars().all()
+        workspace = await db.scalar(
+            select(Workspace).where(
+                Workspace.id == current_user.workspace_id,
+                Workspace.is_active == True
+            )
+        )
+        
         if not workspace:
            raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,

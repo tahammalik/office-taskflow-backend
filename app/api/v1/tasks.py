@@ -179,14 +179,14 @@ async def get_my_tasks(
     db: db_dependency, current_user: user_model.User = Depends(get_current_user)
 ):
     try:
-        tasks = await db.scalars(
+        tasks = (await db.scalars(
             select(task_model.Task)
             .where(task_model.Task.assign_to == current_user.id)
             .options(
                 selectinload(task_model.Task.assigned_employee),
                 selectinload(task_model.Task.creator_manager)
             )
-        )
+        )).all()
         
         return tasks
 
