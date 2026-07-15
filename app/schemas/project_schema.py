@@ -27,6 +27,7 @@ class ProjectResponse(BaseModel):
     description: str
     starting_at: datetime
     deadline: datetime
+    status: str
     teams: list[TeamRead] = []  # return list of teams assigned to this project 
     created_by: UserMinRead = Field(alias='created_by') # return creator details in response
 

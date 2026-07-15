@@ -18,12 +18,12 @@ from app.core.security import (create_access_token,
 from app.models.user_model import User
 from app.schemas.user_schema import UserCreate, UserResponse
 from app.services.authentication_service import authenticate_user, find_email
-
-
+from app.core.config import SecretConfig
 
 # from app.core.dependencies import require_role, get_current_user
 
 logger = get_logger(__name__)
+secrets = SecretConfig()
 
 router = APIRouter(prefix="/v1/auth", tags=["Authentication"])
 
@@ -50,7 +50,7 @@ async def create_user(user_data: UserCreate, db: db_dependency):
 
     except Exception as e:
         await db.rollback()
-        logger.error("DB ERROR: %s", e, exc_info=True)
+        logger.error(f"DB ERROR: %s", e, exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Database error occurred",
@@ -84,30 +84,34 @@ async def login(response:Response,form_data: Annotated[OAuth2PasswordRequestForm
     return {"access_token": access_token, "token_type": "bearer"}
 
 @router.post("/refresh")
-async def refresh(request:Request,response:Response):
+async def refresh(request: Request, response: Response):
     refresh_token = request.cookies.get("refresh_token")
     if not refresh_token:
-        raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="Missing refresh token"
-            )
-    payload = decode_token(token=refresh_token,expected_type="refresh")
+        raise HTTPException(401, "Missing refresh token")
+
+    payload = await decode_token(refresh_token, expected_type="refresh")
+    if not payload:
+        raise HTTPException(401, "Invalid refresh token")
+
     jti = payload.get("jti")
     username = payload.get("sub")
-    if not is_refresh_token_valid_and_revoke(jti=jti):
-        raise HTTPException(status_code=401, detail="Refresh token invalid or already used")
-    new_access = create_access_token(data={"sub": username})
-    new_refresh = create_refresh_token(data={"sub": username})
+
+    # This atomically checks and revokes the token
+    if not await is_refresh_token_valid_and_revoke(jti):
+        raise HTTPException(401, "Refresh token invalid or already used")
+
+    # Generate new tokens
+    new_access = await create_access_token(data={"sub": username})
+    new_refresh = await create_refresh_token(data={"sub": username})
 
     response.set_cookie(
-         key="refresh_token",
-        secure=True,
-        value=refresh_token,
+        key="refresh_token",
+        value=new_refresh,
         httponly=True,
+        secure=True,
         samesite="strict",
         max_age=7 * 24 * 60 * 60
     )
-
     return {"access_token": new_access, "token_type": "bearer"}
 
 @router.post("/logout")
@@ -115,8 +119,8 @@ async def logout(request:Request,response:Response):
     token = request.cookies.get("refresh_token")
     if token:
         try:
-            payload = decode_token(token,expected_type="refresh")
-            revoke_refresh_token(payload["jti"])
+            payload = await decode_token(token,expected_type="refresh")
+            await revoke_refresh_token(payload["jti"])
         except Exception:
             pass
     response.delete_cookie("refresh_token")

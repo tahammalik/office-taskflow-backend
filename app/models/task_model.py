@@ -10,7 +10,6 @@ class TaskStatus(str,enum.Enum):
     IN_PROGRESS = "in_progress"
     REVIEW = "review"
     COMPLETED = "completed"
-    #FAILED = "failed"
 
 class Task(Base):
     __tablename__ = 'tasks'

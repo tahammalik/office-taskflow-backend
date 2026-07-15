@@ -16,4 +16,5 @@ class Workspace(Base):
     # relationship
     projects = relationship('Project', back_populates='workspace')
     users = relationship('User', foreign_keys='User.workspace_id', back_populates='workspace')
-    invitations = relationship('Invitation', back_populates='workspace')
+    teams = relationship('Team',foreign_keys='Team.workspace_id',back_populates='workspace')
+    

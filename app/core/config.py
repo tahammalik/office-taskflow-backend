@@ -11,7 +11,10 @@ from sqlalchemy import URL
 class DatabaseConfig(BaseSettings):
     # take database connection info from .env file
     model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", case_sensitive=False
+        env_file=".env",
+        env_file_encoding="utf-8",
+        case_sensitive=True, 
+        extra="ignore",env_prefix="DB_"
     )
 
     drivername: str = Field(alias="DB_DRIVERNAME")
@@ -20,6 +23,11 @@ class DatabaseConfig(BaseSettings):
     host: str = Field(alias="DB_HOST")
     port: int = Field(alias="DB_PORT")
     database: str = Field(alias="DB_DATABASE")
+
+    database_url: str | None = None
+    redis_url: str | None = None
+    secret_key: str | None = None
+    debug: bool = False
 
     # build connection with database
     def build_connection(self) -> URL:
@@ -37,7 +45,7 @@ class DatabaseConfig(BaseSettings):
 class SecretConfig(BaseSettings):
     # take secret keys and passwords from .key file
     model_config = SettingsConfigDict(
-        env_file=".key", env_file_encoding="utf-8", case_sensitive=False
+        env_file=".key", env_file_encoding="utf-8", case_sensitive=True, extra="ignore" 
     )
 
     password_secret_key: str  # for password, makes passwords more secure by adding this key to the password before hashing
@@ -47,7 +55,7 @@ class SecretConfig(BaseSettings):
 
 class EmailConfig(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".key", env_file_encoding="utf-8",case_sensitive=False)
+        env_file=".key", env_file_encoding="utf-8",case_sensitive=False, extra="ignore" )
     resend_api_key: str
     FROM_EMAIL: EmailStr
     TO_EMAIL: EmailStr

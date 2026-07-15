@@ -10,7 +10,7 @@ email verification etc in future.
 from datetime import datetime, timedelta, timezone
 from logging import getLogger
 import os
-from redis_client import get_redis_client
+from app.core.redis_client import get_redis_client
 from fastapi import HTTPException
 import jwt
 from argon2 import PasswordHasher
@@ -87,7 +87,7 @@ end
 """
 atomic_check_and_delete = get_redis_client().register_script(lua_script)
 
-async def decode_token(token:str, expected_type:str):
+async def decode_token(token:str, expected_type:str)-> dict:
     try:
         payload = jwt.decode(token,secrets.secret_key, algorithms=[secrets.algorithm])
 
@@ -97,11 +97,12 @@ async def decode_token(token:str, expected_type:str):
                 detail="Invalid token type"
             )
         return payload
+    
     except Exception as e:
-        logger.error("Exception error!")
+        logger.error(f"error: %s",e)
 
 async def is_refresh_token_valid_and_revoke(jti: str) -> bool:
-    result = atomic_check_and_delete(keys=f"refresh_token:{jti}",args=["valid"])
+    result = atomic_check_and_delete(keys=[f"refresh_token:{jti}"],args=["valid"])
     return result == 1
 
 async def revoke_refresh_token(jti:str):

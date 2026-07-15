@@ -1,6 +1,5 @@
 from sqlalchemy import Boolean, Column, DateTime, ForeignKey, Integer, String, func
 from sqlalchemy.orm import relationship
-from sqlalchemy.dialects.postgresql import ARRAY
 from app.core.db import Base
 
 """class TeamAccess:
@@ -27,5 +26,6 @@ class User(Base):
     created_tasks = relationship("Task", foreign_keys="Task.created_by", back_populates="creator_manager")
     assigned_tasks = relationship("Task", foreign_keys="Task.assign_to", back_populates="assigned_employee")
     led_teams = relationship("Team", back_populates="leader")
-    sent_invitations = relationship("Invitation",foreign_keys="Invitation.invited_by",back_populates="inviter",)
     teams = relationship("Team", secondary="team_members", back_populates="members")
+    project_history = relationship("ProjectHistory", back_populates="user")
+    

@@ -1,5 +1,4 @@
 from app.models.user_model import User
-from app.models.invitation_model import Invitation
 from app.models.workspace_model import Workspace
 from app.models.team_model import Team
 from app.models.project_model import Project

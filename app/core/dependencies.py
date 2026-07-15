@@ -18,7 +18,7 @@ from app.services.authentication_service import find_user
 
 secrets = SecretConfig()
 
-oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="v1/auth/login")
 
 
 # dependency to get current user from jwt token

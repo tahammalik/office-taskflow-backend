@@ -27,7 +27,7 @@ class Team(Base):
     leader_id = Column(Integer, ForeignKey('users.id'), nullable=False)
 
     # Relationships
-    workspace = relationship('Workspace')
+    workspace = relationship('Workspace',foreign_keys=[workspace_id],back_populates='teams')
     leader = relationship('User', back_populates='led_teams')
     tasks = relationship('Task', back_populates='team',cascade="all, delete-orphan")
     projects = relationship('Project', secondary='project_teams', back_populates='teams')
