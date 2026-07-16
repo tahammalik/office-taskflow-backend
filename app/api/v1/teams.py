@@ -28,6 +28,9 @@ async def add_new_team(
     db: db_dependency,
     current_user: User = Depends(get_current_user),
 ):
+    if current_user.workspace_id is None:
+        raise HTTPException(400, "You are not assigned to any workspace")
+
     new_team = Team(
         team_name=group_data.team_name,
         description=group_data.description,
@@ -79,10 +82,10 @@ async def show_teams(db: db_dependency, current_user: User = Depends(get_current
                 selectinload(Team.projects)
             )
         )
-        if not teams:
+        if not teams.all():
             raise HTTPException(404,detail="teams doesn't exist")
 
-        return teams
+        return teams.all()
 
 
 

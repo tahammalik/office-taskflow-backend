@@ -26,7 +26,8 @@ async def create_workspace(
     # search for email is already exist or not
     existing = await db.scalar(
             select(Workspace).where(
-                Workspace.email == workspace_data.email
+                Workspace.email == workspace_data.email,
+                Workspace.is_active == True
             )
         )
     
@@ -47,17 +48,9 @@ async def create_workspace(
                          .values(role="admin", workspace_id=new_workspace.id))
         await db.commit()
 
-        result = await db.scalar(
-            select(Workspace).where(
-                Workspace.id == new_workspace.id
-            ).options(
-                selectinload(Workspace.projects),
-                selectinload(Workspace.teams),
-                selectinload(Workspace.users)
-            )
-        )
-
-        return result
+        await db.refresh(new_workspace, attribute_names=["projects", "teams", "users"])
+        return new_workspace
+    
     except Exception as e:
         await db.rollback()
         logger.error("DB ERROR: %s", e)
@@ -130,6 +123,10 @@ async def list_workspaces(db: db_dependency,current_user: User = Depends(get_cur
             select(Workspace).where(
                 Workspace.id == current_user.workspace_id,
                 Workspace.is_active == True
+            ).options(
+                selectinload(Workspace.teams),
+                selectinload(Workspace.projects),
+                selectinload(Workspace.users)
             )
         )
         

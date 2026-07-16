@@ -1,0 +1,36 @@
+services:
+
+  taskio:
+    build: .
+    container_name: taskio
+    ports:
+      - "8000:8000"
+    env_file:
+      - .env
+      - .key
+    volumes:
+      - .:/app
+    environment:
+      - WATCHFILES_FORCE_POLLING=true
+    depends_on:
+      - db
+      - redis
+  
+  db:
+    image: postgres:16
+    container_name: postgres-db
+    restart: always
+    environment:
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_DB=${POSTGRES_DB}
+    ports:
+      - "5432:5432"
+    volumes:
+      - ./postgres_data:/var/lib/postgresql/data
+
+  redis:
+    image: redis:7
+    container_name: redis-cache
+    ports:
+      - "6379:6379"

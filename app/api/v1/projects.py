@@ -126,9 +126,12 @@ async def show_projects(
     db: db_dependency, current_user: user_model.User = Depends(get_current_user)
 ):
 
-    result = await db.execute(select(Project).where(
-        Project.workspace_id == current_user.workspace_id
-        ))
+    result = await db.execute(
+        select(Project).where(
+            Project.workspace_id == current_user.workspace_id,
+            Project.is_deleted == False
+        )
+    )
     projects = result.scalars().all()
 
     return projects

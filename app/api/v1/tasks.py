@@ -116,11 +116,11 @@ async def update_task_status(task_id:int,
             team_model.Team.leader_id == current_user.id
         )
     )
-    else:
+    else:  # user
         task = await db.scalar(
             select(task_model.Task).where(
                 task_model.Task.id == task_id,
-                task_model.Task.team_id == current_user.team_id,
+                task_model.Task.assign_to == current_user.id,
                 task_model.Task.workspace_id == current_user.workspace_id
             )
         )

@@ -6,12 +6,12 @@ from fastapi.requests import Request
 from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 from app.core.exceptions import *
-import uvicorn
+from app.core.logging_config import setup_logging
 
-#Base.metadata.create_all(bind=engine)
-#Base.metadata.create_all(bind=engine)
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
+        setup_logging()
         async with engine.begin() as conn:
             await conn.run_sync(Base.metadata.create_all)
 
