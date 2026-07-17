@@ -17,7 +17,7 @@ from app.core.security import (create_access_token,
                                revoke_refresh_token)
 from app.models.user_model import User
 from app.schemas.user_schema import UserCreate, UserResponse
-from app.services.authentication_service import authenticate_user, find_email
+from app.services.authentication_service import authenticate_user, find_email,is_username_exist
 from app.core.config import SecretConfig
 
 # from app.core.dependencies import require_role, get_current_user
@@ -33,6 +33,11 @@ router = APIRouter(prefix="/v1/auth", tags=["Authentication"])
 async def create_user(user_data: UserCreate, db: db_dependency):
 
     email = await find_email(user_data.email, db=db)
+    if await is_username_exist(user_data.username):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="username must be unique"
+        )
     if email:
         raise EmailAlreadyExistsError(message="email already exist")
     new_user = User(
