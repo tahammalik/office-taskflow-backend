@@ -33,7 +33,7 @@ router = APIRouter(prefix="/v1/auth", tags=["Authentication"])
 async def create_user(user_data: UserCreate, db: db_dependency):
 
     email = await find_email(user_data.email, db=db)
-    if await is_username_exist(user_data.username):
+    if await is_username_exist(user_data.username,db=db):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="username must be unique"
