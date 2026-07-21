@@ -49,7 +49,7 @@ class SecretConfig(BaseSettings):
     )
 
     password_secret_key: str  # for password, makes passwords more secure by adding this key to the password before hashing
-    dummy_hash: str  # dummy hash for password comaprison
+    dummy_pass: str = "$argon2i$v=19$m=16,t=2,p=1$ZGRkc2ZzZGZzc2Rm$rVCuSiAq61E9DtMfNk1Z7Q" # dummy hash for password comaprison
     secret_key: str  # for jwt token, should be long and random
     algorithm: str  # for jwt token
 
