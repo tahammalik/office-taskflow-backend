@@ -18,7 +18,7 @@ async def lifespan(app: FastAPI):
         yield 
         await engine.dispose()
 
-app = FastAPI(title="Office TaskFlow",lifespan=lifespan)
+app = FastAPI(title="taskio",lifespan=lifespan)
 
 app.add_middleware(
     CORSMiddleware,
