@@ -21,7 +21,7 @@ from app.core.logging_config import get_logger
 from app.core.redis_client import get_redis_client
 
 # from app.schemas.token_schema import Token
-from app.core.security import verify_password
+from app.core.security import verify_password,hash_password
 from app.models.user_model import User
 
 logger = get_logger(__name__)
@@ -40,17 +40,17 @@ def user_to_response(user: User) -> dict:
     }
 
 
-async def find_email(email: str, db: db_dependency):
+async def is_email_exist(email: str, db: db_dependency):
     # if user exist return user object else none
-    result = await db.execute(select(User).where(User.email == email))
-    return result.scalar_one_or_none()
+    result = await db.scalar(select(User).where(User.email == email))
+    return result is not None
 
 
 # Verify username for not duplicate username exists | return bool value
 async def is_username_exist(username: str, db: db_dependency) -> bool:
     # if user exist return true else false
-    result = await db.execute(select(User).where(User.username == username))
-    return result.scalar_one_or_none() is not None
+    result = await db.scalar(select(User).where(User.username == username))
+    return result is not None
 
 
 # Verify user and return user object
@@ -115,7 +115,7 @@ async def authenticate_user(
     user = result.scalar_one_or_none()
 
     if not user:
-        verify_password(SecretConfig().dummy_hash, plain_password=plain_password)
+        verify_password(hash_password(SecretConfig().dummy_pass), plain_password=plain_password)
         try:
             record_failed_attempt_redis(username=username)
         except RedisError:
