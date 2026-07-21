@@ -13,3 +13,6 @@ fastapi-mail
 python-multipart
 resend
 asyncpg
+httpx2
+pytest
+pytest-asyncio
