@@ -4,6 +4,14 @@ Taskio is a REST API for team-based task management. Teams belong to workspaces,
 
 Built with FastAPI, PostgreSQL, and Redis, using async/await throughout.
 
+## Live Demo
+
+- API: https://office-taskflow-backend.onrender.com
+- Interactive docs: https://office-taskflow-backend.onrender.com/docs
+
+Hosted on Render (API) with PostgreSQL and Redis on Supabase/Upstash.
+Note: free-tier hosting may spin down when idle — the first request after inactivity can take a few seconds.
+
 ## What it does
 
 - **Authentication** — signup, login, logout, and JWT access/refresh token rotation with cookies
