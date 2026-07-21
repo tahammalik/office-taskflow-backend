@@ -17,7 +17,7 @@ from app.core.security import (create_access_token,
                                revoke_refresh_token)
 from app.models.user_model import User
 from app.schemas.user_schema import UserCreate, UserResponse
-from app.services.authentication_service import authenticate_user, find_email,is_username_exist
+from app.services.authentication_service import authenticate_user,is_email_exist,is_username_exist
 from app.core.config import SecretConfig
 
 # from app.core.dependencies import require_role, get_current_user
@@ -32,14 +32,17 @@ router = APIRouter(prefix="/v1/auth", tags=["Authentication"])
 @router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(user_data: UserCreate, db: db_dependency):
 
-    email = await find_email(user_data.email, db=db)
+    if await is_email_exist(user_data.email, db=db):
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="email already exist"
+        )
     if await is_username_exist(user_data.username,db=db):
         raise HTTPException(
             status_code=status.HTTP_409_CONFLICT,
             detail="username must be unique"
         )
-    if email:
-        raise EmailAlreadyExistsError(message="email already exist")
+
     new_user = User(
         username=user_data.username,
         email=user_data.email,
@@ -62,7 +65,7 @@ async def create_user(user_data: UserCreate, db: db_dependency):
         )
 
 
-@router.post("/login")
+@router.post("/login",status_code=status.HTTP_201_CREATED)
 async def login(response:Response,form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: db_dependency):
 
     user = await authenticate_user(form_data.username, form_data.password, db=db)
