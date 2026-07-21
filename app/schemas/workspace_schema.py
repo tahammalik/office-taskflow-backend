@@ -3,7 +3,7 @@ from typing import Optional,List
 from app.schemas.project_schema import ProjectResponse
 from app.schemas.team_schema import TeamResponse
 from app.schemas.user_schema import UserResponse
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr,ConfigDict
 
 
 class CreateWorkspace(BaseModel):
@@ -23,7 +23,7 @@ class ResponseWorkspace(BaseModel):
 
 
     class Config:
-        from_attributes = True
+        model_config = ConfigDict(from_attributes=True)
 
 
 class UpdateWorkspace(BaseModel):
