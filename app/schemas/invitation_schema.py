@@ -1,29 +1,23 @@
-from pydantic import BaseModel, EmailStr
-import typing as t
-import datetime
+from datetime import datetime
+from pydantic import BaseModel, EmailStr, ConfigDict
 
-class InvitationCreate(BaseModel):
+
+class CreateInvitation(BaseModel):
     email: EmailStr
-    role: str = t.Literal["manager", "user"]
+    role: str = "user"  # "user" or "manager" — restrict at validation if needed
 
-class InvitationDB(BaseModel):
+
+class ResponseInvitation(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     email: EmailStr
-    role: str
-    token: str
     workspace_id: int
-    invited_by: int
-    status: t.Literal["pending", "accepted", "declined"]
+    role: str
+    status: str = "pending"  # "pending", "accepted", or "declined"
+    created_at: datetime
     expires_at: datetime
 
-    class Config:
-        orm_mode = True
 
-class InvitationResponse(BaseModel):
-    id: int
-    invited_email: EmailStr
-    role: str
-    status: t.Literal["pending", "accepted", "declined"]
-
-    class Config:
-        orm_mode = True
+class AcceptInvitation(BaseModel):
+    token: str
