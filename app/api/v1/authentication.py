@@ -65,7 +65,7 @@ async def create_user(user_data: UserCreate, db: db_dependency):
         )
 
 
-@router.post("/login",status_code=status.HTTP_201_CREATED)
+@router.post("/login",status_code=status.HTTP_200_OK)
 async def login(response:Response,form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: db_dependency):
 
     user = await authenticate_user(form_data.username, form_data.password, db=db)
@@ -85,7 +85,7 @@ async def login(response:Response,form_data: Annotated[OAuth2PasswordRequestForm
         secure=True,
         value=refresh_token,
         httponly=True,
-        samesite="strict",
+        samesite="none",
         max_age=7 * 24 * 60 * 60
     )
 
@@ -117,7 +117,7 @@ async def refresh(request: Request, response: Response):
         value=new_refresh,
         httponly=True,
         secure=True,
-        samesite="strict",
+        samesite="none",
         max_age=7 * 24 * 60 * 60
     )
     return {"access_token": new_access, "token_type": "bearer"}
