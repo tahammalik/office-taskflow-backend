@@ -1,16 +1,14 @@
 from datetime import datetime, timedelta, timezone
 import secrets
-
 from sqlalchemy import ForeignKey, String, DateTime
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
-from app.core.db import Base  # adjust import to match your actual Base location
+from app.core.db import Base
 
 
 class Invitation(Base):
     __tablename__ = "invitations"
 
-    id: Mapped[int] = mapped_column(primary_key=True)
+    id: Mapped[int] = mapped_column(primary_key=True,autoincrement=True)
     email: Mapped[str] = mapped_column(String, nullable=False, index=True)
     workspace_id: Mapped[int] = mapped_column(ForeignKey("workspaces.id"), nullable=False)
     invited_by: Mapped[int] = mapped_column(ForeignKey("users.id"), nullable=False)
