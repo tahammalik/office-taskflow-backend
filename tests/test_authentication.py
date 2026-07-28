@@ -1,5 +1,5 @@
-import pytest
-from httpx import ASGITransport,AsyncClient
+
+from httpx import AsyncClient
 
 """
 Test cases for authentication endpoints.
@@ -90,7 +90,7 @@ async def test_user_login(
         }
     )
 
-    assert response.status_code == 201
+    assert response.status_code == 200
     return response.json()
 
 async def test_user_login_invalid_credentials(
