@@ -6,10 +6,15 @@ from app.core.dependencies import get_current_user, require_role
 from app.core.logging_config import get_logger
 from app.models.workspace_model import Workspace
 from app.models.project_model import Project
+from app.models.invitation_model import Invitation
 from app.models.team_model import Team
 from app.models.task_model import Task
 from app.models.user_model import User
 from app.schemas.workspace_schema import CreateWorkspace, ResponseWorkspace
+from app.schemas.invitation_schema import CreateInvitation
+from typing import Annotated
+from app.services.email_services import send_invite_email
+from datetime import datetime, timezone
 
 router = APIRouter(prefix="/v1/workspace", tags=["Workspace"])
 
@@ -17,7 +22,11 @@ logger = get_logger(__name__)
 
 
 # Create new Workspace
-@router.post("/create", response_model=ResponseWorkspace)
+@router.post(
+        "/create",
+        response_model=ResponseWorkspace,
+        status_code=status.HTTP_201_CREATED,
+    )
 async def create_workspace(
     workspace_data: CreateWorkspace,
     db: db_dependency,
@@ -43,6 +52,7 @@ async def create_workspace(
     )
     try:
         db.add(new_workspace)
+        await db.flush()
         await db.execute(update(User)
                          .where(User.id == current_user.id)
                          .values(role="admin", workspace_id=new_workspace.id))
@@ -142,3 +152,75 @@ async def list_workspaces(db: db_dependency,current_user: User = Depends(get_cur
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Database error occurred",
         )
+
+@router.post('/invite',dependencies=[Depends(require_role(["admin","manager"]))],status_code=201)
+async def invite_user(invite:CreateInvitation,current_user:Annotated[User,Depends(get_current_user)],db:db_dependency):
+
+    workspace = await db.scalar(
+        select(Workspace).where(
+            Workspace.id == current_user.workspace_id,
+            Workspace.is_active == True
+        )
+    )
+
+    token = Invitation.generate_token()
+
+    await send_invite_email(
+                receiver_email=invite.email,
+                token=token,
+                workspace_name=workspace.name
+            )
+
+    new_invitation = Invitation(
+            email=invite.email,
+            role=invite.role,
+            workspace_id=current_user.workspace_id,
+            invited_by=current_user.id,
+            token=token,
+            status="pending",
+            expires_at=Invitation.default_expiry()
+        )
+
+    try:
+            db.add(new_invitation)
+            await db.commit()
+            await db.refresh(new_invitation)
+            return {"message": "Invitation sent successfully", "invitation": new_invitation}
+    except Exception as e:
+            await db.rollback()
+            logger.error("DB ERROR: %s", e)
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Database error occurred",
+            )
+
+"""@router.post('/accept-invite',status_code=200)
+async def accept_invitation(db:db_dependency):
+    invitation = await db.scalar(
+        select(Invitation).where(
+            Invitation.token == accept_invite.token,
+            Invitation.status == "pending",
+            Invitation.expires_at > datetime.now(timezone.utc)
+        )
+    )
+
+    if not invitation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Invalid or expired invitation token",
+        )
+
+    try:
+        await db.execute(update(Invitation)
+                         .where(Invitation.id == invitation.id)
+                         .values(status="accepted")
+        )
+        await db.commit()
+        return {"message": "Invitation accepted successfully"}
+    except Exception as e:
+        await db.rollback()
+        logger.error("DB ERROR: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database error occurred",
+        )"""
