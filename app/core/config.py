@@ -55,7 +55,10 @@ class SecretConfig(BaseSettings):
 
 class EmailConfig(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file=".key", env_file_encoding="utf-8",case_sensitive=False, extra="ignore" )
-    resend_api_key: str
-    FROM_EMAIL: EmailStr
-    TO_EMAIL: EmailStr
+        env_file=".env", env_file_encoding="utf-8",case_sensitive=False, extra="ignore" )
+    MAIL_SERVER:str
+    MAIL_PORT:int
+    MAIL_FROM:str
+    MAIL_USERNAME:str
+    MAIL_PASSWORD:str
+    FRONTEND_BASE_URL:str
