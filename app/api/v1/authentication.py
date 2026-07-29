@@ -3,6 +3,7 @@ This is file handle authentication router
 """
 import jwt
 from typing import Annotated
+from sqlalchemy import select, update
 from fastapi import APIRouter, Depends, HTTPException, status,Response,Request
 from fastapi.security import OAuth2PasswordRequestForm
 from app.core.db import db_dependency
@@ -15,10 +16,12 @@ from app.core.security import (create_access_token,
                                is_refresh_token_valid_and_revoke,
                                decode_token,
                                revoke_refresh_token)
+from app.models.invitation_model import Invitation
 from app.models.user_model import User
 from app.schemas.user_schema import UserCreate, UserResponse
 from app.services.authentication_service import authenticate_user,is_email_exist,is_username_exist
 from app.core.config import SecretConfig
+from datetime import datetime, timezone
 
 # from app.core.dependencies import require_role, get_current_user
 
@@ -31,18 +34,47 @@ router = APIRouter(prefix="/v1/auth", tags=["Authentication"])
 # Signup endpoint for creating a new user
 @router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
 async def create_user(user_data: UserCreate, db: db_dependency):
+    invitaion = None
 
-    if await is_email_exist(user_data.email, db=db):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="email already exist"
-        )
-    if await is_username_exist(user_data.username,db=db):
-        raise HTTPException(
-            status_code=status.HTTP_409_CONFLICT,
-            detail="username must be unique"
+    if user_data.token:
+        invitaion = await db.scalar(
+            select(Invitation).where(
+                Invitation.token == user_data.token,
+            )
         )
 
+        if not invitaion:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid or expired invitation token",
+            )
+        if invitaion.status != "pending":
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invitation is {invitaion.status}",
+            )
+        if invitaion.expires_at < datetime.now(timezone.utc):
+            invitaion.status = "expired"
+            await db.commit()
+            raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Invitation has expired")
+        
+        if invitaion.email != user_data.email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email does not match the invitation",
+            )
+
+    # Check if the email or username already exists
+    if await is_email_exist(user_data.email, db):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Email already exists",
+        )
+    if await is_username_exist(user_data.username, db):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Username already exists",
+        )
     new_user = User(
         username=user_data.username,
         email=user_data.email,
@@ -54,7 +86,7 @@ async def create_user(user_data: UserCreate, db: db_dependency):
         await db.commit()
         await db.refresh(new_user)
         logger.info(f"user created {new_user.username}")
-        return new_user
+        return {"message":new_user}
 
     except Exception as e:
         await db.rollback()
