@@ -10,7 +10,10 @@ class UserBase(BaseModel):
 
 
 class UserCreate(UserBase):
+    username: str
+    email: EmailStr
     password: str
+    token: Optional[str] = None
 
 
 class UserLogin(BaseModel):
