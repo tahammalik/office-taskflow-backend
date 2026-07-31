@@ -169,6 +169,20 @@ async def invite_user(invite:CreateInvitation,current_user:Annotated[User,Depend
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Workspace not found",
         )
+    existing_invite = await db.scalar(
+        select(Invitation).where(
+            Invitation.email == invite.email,
+            Invitation.status == "pending"
+        )
+    )
+
+    if existing_invite is True:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="An invitation for this user already exists"
+        )
+    # generate a unique token for the invitation
+    token = Invitation.generate_token()
     # First add invitation to the database
     # Then send an email to the invited user with a link to accept the invitation
     new_invitation = Invitation(
@@ -180,8 +194,18 @@ async def invite_user(invite:CreateInvitation,current_user:Annotated[User,Depend
                 status="pending",
                 expires_at=Invitation.default_expiry()
             )
-    # generate a unique token for the invitation
-    token = Invitation.generate_token()
+    try:
+        db.add(new_invitation)
+        await db.commit()
+        await db.refresh(new_invitation)
+    except Exception as e:
+        await db.rollback()
+        logger.error("DB ERROR: %s", e)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Database error occurred",
+        )
+    
 
     await send_invite_email(
                 receiver_email=invite.email,
@@ -189,34 +213,21 @@ async def invite_user(invite:CreateInvitation,current_user:Annotated[User,Depend
                 workspace_name=workspace.name
             )
 
-    try:
-            db.add(new_invitation)
-            await db.commit()
-            await db.refresh(new_invitation)
-            return ResponseInvitation(**new_invitation.__dict__)
-    except Exception as e:
-            await db.rollback()
-            logger.error("DB ERROR: %s", e)
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Database error occurred",
-            )
+    return ResponseInvitation(**new_invitation.__dict__)
 
-@router.post('/invite/accept',response_model=ResponseInvitation,status_code=200)
-async def accept_invitation(invite:AcceptInvitation,db:db_dependency): 
+# Accept invitation for user to join workspace. who is not registered yet.
+@router.get('/invite/{token}',response_model=ResponseInvitation,status_code=200)
+async def get_invitation(token:str,db:db_dependency):
     invitation = await db.scalar(
         select(Invitation).where(
-            Invitation.token == invite.token
+            Invitation.token == token
         )
     )
 
     if not invitation:
-        
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Invitation not found")
-
     if invitation.status != "pending":
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Invitation is no longer valid")
-
     if invitation.expires_at < datetime.now(timezone.utc):
         invitation.status = "expired"
         await db.commit()
@@ -225,10 +236,44 @@ async def accept_invitation(invite:AcceptInvitation,db:db_dependency):
     existing_user = await db.scalar(select(User).where(User.email == invitation.email))
 
     if existing_user:
-        return RedirectResponse(
-            url=f"{settings.FRONTEND_BASE_URL}/v1/auth/login?invite_token={invitation.token}"
-        )
+        return RedirectResponse(url=f"{settings.FRONTEND_BASE_URL}/login?invite_token={token}")
     else:
-        return RedirectResponse(
-            url=f"{settings.FRONTEND_BASE_URL}/v1/auth/signup?invite_token={invitation.token}&email={invitation.email}"
+        return RedirectResponse(url=f"{settings.FRONTEND_BASE_URL}/signup?invite_token={token}&email={invitation.email}")
+# Accept invitation for user to join workspace. who is already registered and logged in.
+@router.post('/invite/accept',response_model=ResponseInvitation,status_code=200)
+async def accept_invitation(invite:AcceptInvitation,db:db_dependency,current_user:Annotated[User,Depends(get_current_user)]): 
+    invitation = await db.scalar(
+        select(Invitation).where(
+            Invitation.token == invite.token
         )
+    )
+
+    if not invitation:
+        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Invitation not found")
+    if invitation.status != "pending":
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Invitation is no longer valid")
+    if invitation.expires_at < datetime.now(timezone.utc):
+        invitation.status = "expired"
+        await db.commit()
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Invitation has expired")
+    if invitation.email != current_user.email:
+        raise HTTPException(status.HTTP_403_FORBIDDEN, detail="This invitation was not issued to your account")
+    if current_user.workspace_id is not None:
+        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Leave your current workspace before accepting a new invitation")
+
+    try:
+        await db.execute(
+            update(User)
+            .where(User.id == current_user.id)
+            .values(role=invitation.role, workspace_id=invitation.workspace_id)
+        )
+        invitation.status = "accepted"
+        await db.commit()
+
+        workspace = await db.scalar(select(Workspace).where(Workspace.id == invitation.workspace_id))
+        await db.refresh(workspace, attribute_names=["projects", "teams", "users"])
+        return workspace
+    except Exception as e:
+        await db.rollback()
+        logger.error("DB ERROR: %s", e)
+        raise HTTPException(status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Database error occurred")
