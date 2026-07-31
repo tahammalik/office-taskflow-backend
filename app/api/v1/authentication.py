@@ -37,7 +37,7 @@ async def create_user(user_data: UserCreate, db: db_dependency):
     invitaion = None
 
     if user_data.token:
-        invitaion = await db.scalar(
+        invitation = await db.scalar(
             select(Invitation).where(
                 Invitation.token == user_data.token,
             )
@@ -79,12 +79,19 @@ async def create_user(user_data: UserCreate, db: db_dependency):
         username=user_data.username,
         email=user_data.email,
         password=hash_password(user_data.password),
+        role=invitation.role if invitation else "user",
+        workspace_id=invitation.workspace_id if invitation else None,
     )
+
 
     try:
         db.add(new_user)
+        await db.flush()  # Flush to get the new user's ID
+        if invitation:
+            invitation.status = "accepted"
+
         await db.commit()
-        await db.refresh(new_user)
+        db.refresh(new_user)  # Refresh to get the updated state of the new user
         logger.info(f"user created {new_user.username}")
         return {"message":new_user}
 
