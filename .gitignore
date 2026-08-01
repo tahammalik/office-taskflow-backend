@@ -5,3 +5,4 @@ __pycache__
 .key
 .dockerignore
 /postgres_data
+app.log

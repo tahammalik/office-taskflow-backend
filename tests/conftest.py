@@ -8,8 +8,6 @@ from sqlalchemy.ext.asyncio import create_async_engine,async_sessionmaker,AsyncS
 from app.main import app
 from httpx import ASGITransport,AsyncClient
 
-#pytest_plugins = ["anyio"]
- 
 db_config = DatabaseConfig()
 
 test_db_url = URL.create(
