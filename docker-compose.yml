@@ -13,8 +13,10 @@ services:
     environment:
       - WATCHFILES_FORCE_POLLING=true
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
   
   db:
     image: postgres:16
@@ -28,9 +30,21 @@ services:
       - "5432:5432"
     volumes:
       - ./postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL","pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
 
   redis:
     image: redis:7
     container_name: redis-cache
     ports:
       - "6379:6379"
+    healthcheck:
+      test: ["CMD","redis-cli","ping"]
+      interval: 2s
+      timeout: 3s
+      retries: 10
+      start_period: 5s
