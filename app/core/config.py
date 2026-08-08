@@ -13,16 +13,16 @@ class DatabaseConfig(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=".env",
         env_file_encoding="utf-8",
-        case_sensitive=True, 
+        case_sensitive=False, 
         extra="ignore",env_prefix="DB_"
     )
 
-    drivername: str = Field(alias="DB_DRIVERNAME")
-    username: str = Field(alias="DB_USERNAME")
-    password: str = Field(alias="DB_PASSWORD")
-    host: str = Field(alias="DB_HOST")
-    port: int = Field(alias="DB_PORT")
-    database: str = Field(alias="DB_DATABASE")
+    drivername: str
+    username: str
+    password: str
+    host: str 
+    port: int 
+    database: str
 
     database_url: str | None = None
     redis_url: str | None = None
