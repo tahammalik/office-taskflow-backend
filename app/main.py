@@ -1,5 +1,5 @@
 from fastapi import FastAPI , status
-from app.api.v1 import tasks, authentication,workspace_auth,teams,projects
+from app.api.v1 import tasks, authentication, workspace,teams,projects
 from app.core.db import Base,engine
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.requests import Request
@@ -7,7 +7,12 @@ from fastapi.responses import JSONResponse
 from contextlib import asynccontextmanager
 from app.core.exceptions import *
 from app.core.logging_config import setup_logging
+from sqlalchemy import text
+from app.core.logging_config import get_logger
+from fastapi.responses import JSONResponse
 
+
+logger = get_logger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -49,14 +54,27 @@ async def account_locked_error(request: Request, exc: AccountLockedError):
     )
 
 app.include_router(authentication.router)
-app.include_router(workspace_auth.router)
+app.include_router(workspace.router)
 app.include_router(projects.router)
 app.include_router(tasks.router)
 app.include_router(teams.router)
 
 
-@app.get("/")
-async def home():
-    return {"message": "server is running"}
+@app.get("/health")
+async def health_check():
+    try:
+        with engine.connect() as connection:
+           connection.execute(text("SELECT 1"))
+
+        return {
+             "status":"healthy",
+             "database":"connected"
+        }
+    except Exception as e:
+        logger.error("SERVICE UNAVILABLE: %s",e)
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content= {"status":"unhealthy","error":str(e)}
+        )
 
 
