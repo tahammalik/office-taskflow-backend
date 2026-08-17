@@ -33,8 +33,8 @@ router = APIRouter(prefix="/v1/auth", tags=["Authentication"])
 
 # Signup endpoint for creating a new user
 @router.post("/signup", response_model=UserResponse, status_code=status.HTTP_201_CREATED)
-async def create_user(user_data: UserCreate, db: db_dependency):
-    invitaion = None
+async def signup_user(user_data: UserCreate, db: db_dependency):
+    invitation = None
 
     if user_data.token:
         invitation = await db.scalar(
@@ -43,22 +43,22 @@ async def create_user(user_data: UserCreate, db: db_dependency):
             )
         )
 
-        if not invitaion:
+        if not invitation:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Invalid or expired invitation token",
             )
-        if invitaion.status != "pending":
+        if invitation.status != "pending":
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invitation is {invitaion.status}",
+                detail=f"Invitation is {invitation.status}",
             )
-        if invitaion.expires_at < datetime.now(timezone.utc):
-            invitaion.status = "expired"
+        if invitation.expires_at < datetime.now(timezone.utc):
+            invitation.status = "expired"
             await db.commit()
             raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Invitation has expired")
         
-        if invitaion.email != user_data.email:
+        if invitation.email != user_data.email:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email does not match the invitation",
@@ -93,7 +93,7 @@ async def create_user(user_data: UserCreate, db: db_dependency):
         await db.commit()
         db.refresh(new_user)  # Refresh to get the updated state of the new user
         logger.info(f"user created {new_user.username}")
-        return {"message":new_user}
+        return new_user
 
     except Exception as e:
         await db.rollback()

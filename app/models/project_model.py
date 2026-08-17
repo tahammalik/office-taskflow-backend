@@ -28,7 +28,7 @@ class Project(Base):
 
     id: Mapped[int] = mapped_column(primary_key=True, index=True)
     title: Mapped[str] = mapped_column(String(250), nullable=False)
-    description: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     deadline: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
     status: Mapped[ProjectStatus] = mapped_column(SAEnum(ProjectStatus, name='project_status_enum'), nullable=False, default=ProjectStatus.PLANNING)
     is_deleted: Mapped[bool] = mapped_column(Boolean, default=False)
@@ -39,6 +39,7 @@ class Project(Base):
     workspace = relationship('Workspace', back_populates='projects')
     teams = relationship('Team', secondary='project_teams', back_populates='projects')
     history = relationship('ProjectHistory', back_populates='project')
+    initiator = relationship('User',back_populates='project_initiator')
 
 class ProjectHistory(Base):
     __tablename__ = 'project_histories'

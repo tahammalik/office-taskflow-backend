@@ -2,7 +2,7 @@ from datetime import datetime
 from typing import Optional,List
 from app.schemas.project_schema import ProjectResponse
 from app.schemas.team_schema import TeamResponse
-from app.schemas.user_schema import UserResponse
+from app.schemas.user_schema import UserResponse,UserMinRead
 from pydantic import BaseModel, EmailStr,ConfigDict
 
 
@@ -19,7 +19,7 @@ class ResponseWorkspace(BaseModel):
     created_at: datetime
     teams:List[TeamResponse] = []
     projects:List[ProjectResponse] = []
-    users: List[UserResponse] = []
+    users: List[UserMinRead] = []
 
 
     class Config:

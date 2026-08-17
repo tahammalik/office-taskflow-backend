@@ -35,3 +35,5 @@ class Task(Base):
     team = relationship('Team', back_populates='tasks', passive_deletes=True)
     assigned_employee = relationship('User', foreign_keys='Task.assign_to', back_populates='assigned_tasks')
     creator_manager = relationship('User', foreign_keys='Task.created_by', back_populates='created_tasks')
+
+    history = relationship('TaskHistory',back_populates='detail')

@@ -25,3 +25,4 @@ class User(Base):
     led_teams = relationship('Team', back_populates='leader')
     teams = relationship('Team', secondary='team_members', back_populates='members')
     project_history = relationship('ProjectHistory', back_populates='user')
+    project_initiator = relationship('Project',back_populates='initiator')

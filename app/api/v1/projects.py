@@ -1,4 +1,4 @@
-from typing import cast
+from sqlalchemy.orm import selectinload
 from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy import insert,select
 from app.core.exceptions import *
@@ -37,9 +37,15 @@ async def create_projects(
     try:
         db.add(new_project)
         await db.commit()
-        await db.refresh(new_project)
+
         logger.info(f"project created: {new_project.id}")
-        project = await db.get(Project,new_project.id)
+        project = await db.scalar(
+            select(Project).where(Project.id == new_project.id)
+            .options(
+                selectinload(Project.teams),
+                selectinload(Project.initiator),
+            )
+        )
         return project
     
     except Exception as e:
@@ -119,20 +125,23 @@ async def update_project(
 @router.get(
     "/show",
     response_model=list[ProjectResponse],
-    dependencies=[Depends(require_role(["admin", "manager"]))],
     status_code=200
 )
 async def show_projects(
     db: db_dependency, current_user: user_model.User = Depends(get_current_user)
 ):
 
-    result = await db.execute(
+    result = await db.scalars(
         select(Project).where(
             Project.workspace_id == current_user.workspace_id,
-            Project.is_deleted == False
+            Project.is_deleted.is_(False)
+        )
+        .options(
+            selectinload(Project.teams),
+            selectinload(Project.initiator),
         )
     )
-    projects = result.scalars().all()
+    projects = result.all()
 
     return projects
 
@@ -218,7 +227,12 @@ async def assign_project(
         await db.execute(insert(ProjectTeams).values(project_id=project_id,team_id=team_id))
         await db.commit()
 
-        project = await db.get(Project,project_id)
+        project = await db.scalar(
+            select(Project).where(Project.id == project_id)
+            .options(
+                selectinload(Project.teams)
+            )
+        )
         logger.info(f"Project {project_id} assigned to Team:{team_id}")
         return project
     

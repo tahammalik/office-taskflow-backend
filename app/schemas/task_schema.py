@@ -23,6 +23,15 @@ class TaskHistory(BaseModel):
     comment: str
     changed_at: datetime
 
+class TaskHistoryRead(BaseModel):
+    id: int
+    task_id: int
+    changed_by: int
+    old_status: str
+    new_status: str
+    comment: str
+    changed_at: datetime
+
 # Task response schema
 class ResponseTask(BaseModel):
     id: int
@@ -31,7 +40,7 @@ class ResponseTask(BaseModel):
     status: str
     assigned_employee: UserMinRead
     creator_manager: UserMinRead
-    task_history: TaskHistory
+    history: list[TaskHistoryRead] = []
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -41,7 +50,7 @@ class TaskUpdate(BaseModel):
     title: Optional[str] = None
     description: Optional[str] = None
     assign_to: Optional[int] = None  # param:id so datatype is int
-    status: Optional[Literal["pending", "in_progress", "review", "done"]] = None
-    status_comment: Optional[str] = None
-    dead_line: Optional[datetime] = None
+    status: Optional[Literal["pending", "in_progress", "review", "completed"]] = None
+    status_comment: Optional[str] = ""
+    dead_line: datetime | None = None
 

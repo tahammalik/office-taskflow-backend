@@ -25,10 +25,10 @@ class ProjectResponse(BaseModel):
     id: int
     title: str
     description: str
-    starting_at: datetime
     deadline: datetime
     status: str
+    created_at: datetime
+    initiator: UserMinRead # return creator details in response
     teams: list[TeamRead] = []  # return list of teams assigned to this project 
-    created_by: UserMinRead = Field(alias='created_by') # return creator details in response
 
     model_config = ConfigDict(from_attributes=True)

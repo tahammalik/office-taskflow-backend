@@ -2,6 +2,7 @@ from pydantic import BaseModel,ConfigDict
 from datetime import datetime
 from typing import Optional
 from app.schemas.user_schema import UserMinRead
+from typing import List
 
 class CreateTeam(BaseModel):
 
@@ -16,9 +17,10 @@ class TeamResponse(BaseModel):
     team_name: str
     description: Optional[str]
     created_at: datetime
-    project_id: Optional[int] = None
     leader: UserMinRead
-    tasks: Optional[list] = []
+    members: List[UserMinRead] = []
+    #tasks: Optional[list] = []
+    
 
     model_config = ConfigDict(from_attributes=True)
 

@@ -65,7 +65,7 @@ async def add_new_task(
         title=task_data.title,
         description=task_data.description,
         status=task_data.status,
-        dead_line=task_data.dead_line,
+        deadline=task_data.dead_line,
         team_id=task_data.team_id,
         assign_to=task_data.assign_to,
         created_by=current_user.id,
@@ -82,7 +82,8 @@ async def add_new_task(
             .where(task_model.Task.id == new_task.id)
             .options(
                 selectinload(task_model.Task.assigned_employee),
-                selectinload(task_model.Task.creator_manager)
+                selectinload(task_model.Task.creator_manager),
+                selectinload(task_model.Task.history)
             )
         )
         return task
@@ -163,8 +164,19 @@ async def update_task_status(task_id:int,
     try:
         await db.commit()
         await db.refresh(task)
+
+        result_task = await db.scalar(
+            select(task_model.Task).where(
+                task_model.Task.id == task_id,
+                task_model.Task.workspace_id == current_user.workspace_id,
+            ).options(
+                selectinload(task_model.Task.assigned_employee),
+                selectinload(task_model.Task.creator_manager),
+                selectinload(task_model.Task.history)
+            )
+        )
         logger.info(f"Task {task_id} updated by user {current_user.id}")
-        return task
+        return result_task
     except Exception as e:
         await db.rollback()
         logger.error("DB ERROR: %s", e)
@@ -173,60 +185,35 @@ async def update_task_status(task_id:int,
             detail="Database error occurred"
         )
 
-# only employee can see their own task
-@router.get("/show", response_model=List[ResponseTask])
+@router.get("/show", response_model=List[ResponseTask],status_code=200)
 async def get_my_tasks(
     db: db_dependency, current_user: user_model.User = Depends(get_current_user)
 ):
-    try:
-        tasks = (await db.scalars(
-            select(task_model.Task)
-            .where(task_model.Task.assign_to == current_user.id)
-            .options(
+    if current_user.role == "manager" or current_user.role == "user":
+        tasks = await db.scalars(
+            select(task_model.Task).where(
+                task_model.Task.workspace_id == current_user.workspace_id,
+                task_model.Task.team_id == current_user.team_id
+            ).options(
                 selectinload(task_model.Task.assigned_employee),
-                selectinload(task_model.Task.creator_manager)
+                selectinload(task_model.Task.creator_manager),
+                selectinload(task_model.Task.history)
             )
-        )).all()
-        
-        return tasks
-
-    except Exception as e:
-        logger.error("DB ERROR: %s", e)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Database error occurred",
         )
 
-@router.get("/progress", dependencies=[Depends(require_role(["manager", "admin"]))], response_model=List[ResponseTask])
-async def see_progress(
-    db: db_dependency,
-    current_user: Annotated[user_model.User,Depends(get_current_user)]
-):
-    try:
-        if current_user.role == "admin":
-            # Admin sees ALL tasks in the workspace
-            query = select(task_model.Task).where(
+        return tasks.all()
+
+    else:
+        tasks = await db.scalars(
+            select(task_model.Task).where(
                 task_model.Task.workspace_id == current_user.workspace_id
+            ).options(
+                selectinload(task_model.Task.assigned_employee),
+                selectinload(task_model.Task.creator_manager),
+                selectinload(task_model.Task.history)
             )
-        else:
-            # Manager sees only tasks from teams they lead
-            query = (
-                select(task_model.Task)
-                .join(team_model.Team, team_model.Team.id == task_model.Task.team_id)
-                .where(
-                    team_model.Team.leader_id == current_user.id,
-                    team_model.Team.workspace_id == current_user.workspace_id
-                )
-            )
-        
-        # Optionally eager-load relationships if your response schema needs them
-        query = query.options(
-            selectinload(task_model.Task.assign_to),
-            selectinload(task_model.Task.created_by)
         )
-        
-        tasks = (await db.execute(query)).scalars().all()
-        return tasks
-    except Exception as e:
-        logger.error(f"DB ERROR: %s", e)
-        raise HTTPException(500, "Database error occurred")
+
+        return tasks.all()
+
+# Here should be delete task endpoint

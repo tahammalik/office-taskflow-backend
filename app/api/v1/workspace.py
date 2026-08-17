@@ -128,7 +128,7 @@ async def delete_workspace(workspace_id: int, db: db_dependency, current_user: U
         logger.error("DB ERROR: %s", e)
         raise HTTPException(status_code=500, detail="Database error occurred")
 
-@router.get("/current", response_model=ResponseWorkspace, dependencies=[Depends(require_role(["admin"]))])
+@router.get("/current", response_model=ResponseWorkspace)
 async def list_workspaces(db: db_dependency,current_user: User = Depends(get_current_user)):
     try:
         workspace = await db.scalar(
@@ -136,17 +136,19 @@ async def list_workspaces(db: db_dependency,current_user: User = Depends(get_cur
                 Workspace.id == current_user.workspace_id,
                 Workspace.is_active == True
             ).options(
-                selectinload(Workspace.teams),
-                selectinload(Workspace.projects),
+                selectinload(Workspace.teams).selectinload(Team.leader),
+                selectinload(Workspace.teams).selectinload(Team.members),
+                selectinload(Workspace.projects).selectinload(Project.teams),
+                selectinload(Workspace.projects).selectinload(Project.initiator),
                 selectinload(Workspace.users)
             )
         )
         
         if not workspace:
            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Work space did not found"
-            )
+               status_code=404,
+               detail="Workspace did not found!"
+           )
         return workspace
     except Exception as e:
         logger.error("DB ERROR: %s", e)

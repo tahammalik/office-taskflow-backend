@@ -8,6 +8,7 @@ from app.core.dependencies import get_current_user, require_role
 from app.core.logging_config import get_logger
 from app.models.user_model import User
 from app.models.team_model import Team
+from app.models.task_model import Task
 from app.models.project_model import Project
 from app.schemas.project_schema import ProjectResponse
 from app.schemas.team_schema import CreateTeam, TeamResponse
@@ -40,9 +41,18 @@ async def add_new_team(
     try:
         db.add(new_team)
         await db.commit()
-        await db.refresh(new_team)
+        team = await db.scalar(
+            select(Team)
+            .where(Team.id == new_team.id)
+            .options(
+                selectinload(Team.leader),
+                selectinload(Team.members),
+                selectinload(Team.projects),
+                selectinload(Team.tasks),
+            )
+        )
         logger.info(f"team created : {group_data.team_name}")
-        return new_team
+        return team
     except Exception as e:
         await db.rollback()
         logger.error(f"DB ERROR: {e}")
@@ -56,7 +66,6 @@ async def add_new_team(
 @router.get(
     "/show",
     response_model=List[TeamResponse],
-    dependencies=[Depends(require_role(["admin", "manager"]))],
 )
 async def show_teams(db: db_dependency, current_user: User = Depends(get_current_user)):
     if current_user.role == "admin":
@@ -64,28 +73,47 @@ async def show_teams(db: db_dependency, current_user: User = Depends(get_current
             select(Team).where(
                 Team.workspace_id == current_user.workspace_id
             ).options(
+                selectinload(Team.leader),
                 selectinload(Team.members),
-                selectinload(Team.projects)
+                selectinload(Team.projects),
+                
             )
         )).all()
         if not teams:
             raise HTTPException(404,detail="teams doesn't exist")
 
         return teams
-    else:
-        teams = await db.scalars(
+    elif current_user.role == "manager":
+        result = await db.scalars(
             select(Team).where(
                 Team.workspace_id == current_user.workspace_id,
                 Team.leader_id == current_user.id
             ).options(
+                selectinload(Team.leader),
                 selectinload(Team.members),
-                selectinload(Team.projects)
+                selectinload(Team.projects),
+                selectinload(Team.tasks), 
             )
         )
-        if not teams.all():
-            raise HTTPException(404,detail="teams doesn't exist")
+        teams = result.all()
 
-        return teams.all()
+        return teams
+    else:
+        result = await db.scalars(
+                    select(Team).where(
+                        Team.workspace_id == current_user.workspace_id,
+                        Team.id == current_user.team_id
+                    ).options(
+                        selectinload(Team.leader),
+                        selectinload(Team.members),
+                        selectinload(Team.projects),
+                        selectinload(Team.tasks), 
+                    )
+                )
+        teams = result.all()
+        
+        return teams
+        
 
 
 

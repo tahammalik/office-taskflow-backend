@@ -1,5 +1,5 @@
 from sqlalchemy import Column,String,Integer,DateTime,ForeignKey
-from  sqlalchemy.orm import Mapped,mapped_column
+from  sqlalchemy.orm import Mapped,mapped_column,relationship
 from typing import Optional
 from app.core.db import Base
 from datetime import datetime
@@ -14,3 +14,5 @@ class TaskHistory(Base):
     new_status: Mapped[str] = mapped_column()
     comment: Mapped[Optional[str]] = mapped_column(nullable=True)
     changed_at: Mapped[datetime] = mapped_column(default=datetime.utcnow)
+
+    detail = relationship('Task',back_populates='history')
