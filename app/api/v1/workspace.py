@@ -218,7 +218,7 @@ async def invite_user(invite:CreateInvitation,current_user:Annotated[User,Depend
     return ResponseInvitation(**new_invitation.__dict__)
 
 # Accept invitation for user to join workspace. who is not registered yet.
-@router.get('/invites/accept?token={token}',status_code=200)
+@router.get('/invitetions/accept?token={token}',status_code=200)
 async def get_invitation(token:str,db:db_dependency):
     invitation = await db.scalar(
         select(Invitation).where(
@@ -242,7 +242,7 @@ async def get_invitation(token:str,db:db_dependency):
     else:
         return RedirectResponse(url=f"{settings.FRONTEND_BASE_URL}/signup?invite_token={token}&email={invitation.email}")
 # Accept invitation for user to join workspace. who is already registered and logged in.
-@router.post('/invite/accept',response_model=ResponseWorkspace,status_code=200)
+@router.post('/invitation/accept',response_model=ResponseWorkspace,status_code=200)
 async def accept_invitation(invite:AcceptInvitation,db:db_dependency,current_user:Annotated[User,Depends(get_current_user)]): 
     invitation = await db.scalar(
         select(Invitation).where(
@@ -254,15 +254,12 @@ async def accept_invitation(invite:AcceptInvitation,db:db_dependency,current_use
         raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Invitation not found")
     if invitation.status != "pending":
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Invitation is no longer valid")
-    if invitation.expires_at < datetime.now(timezone.utc):
+    if invitation.expires_at <= datetime.now(timezone.utc):
         invitation.status = "expired"
         await db.commit()
         raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Invitation has expired")
     if invitation.email != current_user.email:
         raise HTTPException(status.HTTP_403_FORBIDDEN, detail="This invitation was not issued to your account")
-    if current_user.workspace_id is not None:
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Leave your current workspace before accepting a new invitation")
-
     try:
         await db.execute(
             update(User)
