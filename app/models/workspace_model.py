@@ -22,11 +22,11 @@ class Workspace(Base):
     invitations = relationship("Invitation", back_populates="workspace", cascade="all, delete-orphan")
 
 class WorkspaceMembership(Base):
-    __tablename__ == 'workspacemembership'
+    __tablename__ = 'workspacemembership'
 
     id: Mapped[int] = mapped_column(primary_key=True,index=True)
-    user_id: Mapped[int] = mapped_column(Integer,ForeignKey('user.id') nullable=False)
-    workspace_id: Mapped[int] = mapped_column(Integer,ForeignKey('Workspace.id') nullable=False)
+    user_id: Mapped[int] = mapped_column(Integer,ForeignKey('user.id'),nullable=False)
+    workspace_id: Mapped[int] = mapped_column(Integer,ForeignKey('Workspace.id'), nullable=False)
     role: Mapped[str] = mapped_column(String, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now()) 
 
