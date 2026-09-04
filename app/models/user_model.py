@@ -26,3 +26,5 @@ class User(Base):
     teams = relationship('Team', secondary='team_members', back_populates='members')
     project_history = relationship('ProjectHistory', back_populates='user')
     project_initiator = relationship('Project',back_populates='initiator')
+    workspacemembar = relationship('WorkspaceManager',back_populates='user')
+    related_workspace = relationship('WorkspaceManager',back_populates='user_worksapce')
