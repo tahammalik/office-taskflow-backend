@@ -14,7 +14,12 @@ class Workspace(Base):
     email: Mapped[str] = mapped_column(String, unique=True, index=True, nullable=False)
     is_active: Mapped[bool] = mapped_column(Boolean, default=True)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=func.now())
-    created_by: Mapped[Optional[int]] = mapped_column(Integer, ForeignKey('users.id', use_alter=True, name='fk_workspace_created_by'), nullable=True)
+    created_by: Mapped[Optional[int]] = mapped_column(Integer,
+                                                      ForeignKey('users.id', use_alter=True,
+                                                                 name='fk_workspace_created_by'
+                                                                ),
+                                                      nullable=True
+                                                    )
 
     projects = relationship('Project', back_populates='workspace')
     users = relationship('User', foreign_keys='User.workspace_id', back_populates='workspace')
@@ -38,3 +43,12 @@ class WorkspaceMembership(Base):
         ),
     )
 
+    user = relationship('User',
+                        foreign_keys=[user_id],
+                        back_populates='workspacemembar'
+                    )
+    user_workspace = relationship(
+        'Workspace',
+        foreign_keys=[workspace_id],
+        back_populates='related_workspace'
+    )
