@@ -17,12 +17,14 @@ from typing import Annotated
 from app.core.config import SecretConfig
 from app.services.email_services import send_invite_email
 from app.services.workspace_service import WorkspaceService
+from app.services.invitation_service import InvitationService
 from datetime import datetime, timezone
 
 router = APIRouter(prefix="/v1/workspace", tags=["Workspace"])
 settings = SecretConfig()
 logger = get_logger(__name__)
 workspaceservice = WorkspaceService()
+invitationservice = InvitationService()
 
 # Create new Workspace
 @router.post(
@@ -144,29 +146,17 @@ async def invite_user(invite:CreateInvitation,current_user:Annotated[User,Depend
     return ResponseInvitation(**new_invitation.__dict__)
 
 # Accept invitation for user to join workspace. who is not registered yet.
-@router.get('/invitetions/accept?token={token}',status_code=200)
+@router.get('/invitetions',status_code=200)
 async def get_invitation(token:str,db:db_dependency):
-    invitation = await db.scalar(
-        select(Invitation).where(
-            Invitation.token == token
-        )
+    invitation = await invitationservice.get_invitation_by_token(token, db_dependency)
+    existing = await db.scalar(
+        select(Invitation).where(User.email == invitation.email)
     )
-
-    if not invitation:
-        raise HTTPException(status.HTTP_404_NOT_FOUND, detail="Invitation not found")
-    if invitation.status != "pending":
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Invitation is no longer valid")
-    if invitation.expires_at < datetime.now(timezone.utc):
-        invitation.status = "expired"
-        await db.commit()
-        raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Invitation has expired")
-
-    existing_user = await db.scalar(select(User).where(User.email == invitation.email))
-
-    if existing_user:
+    if existing:
         return RedirectResponse(url=f"{settings.FRONTEND_BASE_URL}/login?invite_token={token}")
     else:
-        return RedirectResponse(url=f"{settings.FRONTEND_BASE_URL}/signup?invite_token={token}&email={invitation.email}")
+        return RedirectResponse(
+            url=f"{settings.FRONTEND_BASE_URL}/signup?invite_token={token}&email={invitation.email}")
 # Accept invitation for user to join workspace. who is already registered and logged in.
 @router.post('/invitation/accept',response_model=ResponseWorkspace,status_code=200)
 async def accept_invitation(invite:AcceptInvitation,db:db_dependency,current_user:Annotated[User,Depends(get_current_user)]): 
