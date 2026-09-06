@@ -2,6 +2,9 @@ from fastapi import HTTPException
 from app.core.db import db_dependency
 from app.models.invitation import Invitation
 from app.models.user import User
+from app.core.logging_config import get_logger
+
+logger = get_logger(__name__)
 
 class InvitationService:
     def __init__(self):
@@ -9,7 +12,7 @@ class InvitationService:
 
     async def invite_user(self,
         invite:CreateInvitation,
-        current_user:Annotated[User,Depends(get_current_user)],
+        current_user:User,
         db:db_dependency
     ) -> Invitation:
         workspace = await db.scalar(
@@ -82,9 +85,16 @@ class InvitationService:
             invitation.status = "expired"
             try:
                 await db.commit()
-                raise HTTPException(status.HTTP_400_BAD_REQUEST, detail="Invitation has expired")
             except Exception as e:
                 await db.rollback()
-                logger.error("DB ERROR: %s", e)
+                logger.exception("Failed to expire invitation, ERROR: %s", e)
+                raise HTTPException(
+                    status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail="Invitation expired"
+                )
+            raise HTTPException(
+                status=400,
+                detail="Invitation not found"
+            )
         return invitation
 
