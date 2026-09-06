@@ -1,7 +1,5 @@
 from logging import getLogger
-
 from fastapi import HTTPException, status
-
 from app.core.db import db_dependency
 from app.models.team_model import Team
 from app.schemas.team_schema import CreateTeam
